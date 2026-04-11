@@ -19,9 +19,26 @@ This project uses UV for Python dependency management.
 2. Install Python dependencies: `uv sync`
 3. Run the app: `uv run python main.py`
 
+## Development
+
+### Code Quality
+- **Linting**: `uv run flake8`
+- **Formatting**: `uv run black .` and `uv run isort .`
+- **Type checking**: `uv run mypy`
+- **Pre-commit**: Runs automatically on commits
+
+### Testing
+- Run tests: `uv run pytest`
+- With coverage: `uv run pytest --cov`
+
+### CI/CD
+- GitHub Actions runs linting and tests on pushes/PRs
+- Pre-commit hooks ensure code quality locally
+
 ## Development Workflow
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the multi-agent development process.
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for coding guidelines.
 
 ## Project Structure
 
@@ -29,4 +46,6 @@ See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the multi-agent development process
 - `app/`: Application source code
 - `docs/`: Documentation
 - `tasks/`: Task tracking and backlog
+- `tests/`: Test suite
 - `pyproject.toml`: Project configuration (UV)
+- `.pre-commit-config.yaml`: Pre-commit hooks configuration

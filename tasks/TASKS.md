@@ -38,9 +38,18 @@
 - [x] Define multi-agent workflow structure
 - [x] Document agent responsibilities
 - [x] Specify v1 score-tracking requirements
+- [x] Implement git branch protection hooks
 
 ## Task Format
 
 - `[ ]` - Backlog/In Progress
 - `[x]` - Completed
 - `[!]` - Blocked/Needs Review
+
+## Branch Workflow
+
+When working on tasks:
+1. Create feature branch: `git checkout -b agent/[type]-[task]`
+2. Make changes and commit to branch
+3. Create PR for supervisor review
+4. Supervisor reviews and merges to main

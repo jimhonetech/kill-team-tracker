@@ -4,10 +4,34 @@
 
 1. **Task Identification**: Supervisor reviews `tasks/TASKS.md` and identifies next work item
 2. **Agent Assignment**: Supervisor assigns task to appropriate specialist agent
-3. **Task Execution**: Agent completes work according to their defined scope
-4. **Handoff**: Agent updates relevant files and notifies supervisor of completion
-5. **Validation**: Supervisor reviews changes and either approves or requests revisions
+3. **Task Execution**: Agent completes work on a feature branch
+4. **Pull Request**: Agent creates PR with changes for supervisor review
+5. **Review & Merge**: Supervisor reviews PR, runs tests, then merges to main
 6. **Iteration**: Process repeats with next task
+
+## Branch Strategy
+
+- **Main Branch**: Protected, only accepts merges via approved PRs
+- **Feature Branches**: Named `agent/[type]-[task]` (e.g., `agent/ui-turn-display`)
+- **Pre-commit Hooks**: Prevent direct commits to main branch
+
+## Review Process
+
+### Review Frequency
+- **Per Task**: Not required - trust agents to complete assigned work
+- **Per PR**: Supervisor reviews all code changes before merge
+- **Milestone Review**: Weekly review of overall progress and architecture
+
+### Review Types
+- **Low Risk**: Documentation, formatting, basic tests → Quick approval
+- **Medium Risk**: New features, UI changes → Code review + testing
+- **High Risk**: Architecture changes, data model updates → Thorough review
+
+### PR Requirements
+- Clear description of changes
+- Updated TASKS.md with completion status
+- Passing tests (if applicable)
+- No direct commits to main
 
 ## Task States
 

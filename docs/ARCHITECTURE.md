@@ -69,7 +69,13 @@ The development process is managed by specialized agents:
 - **UV**: Python project management and dependency resolution
 - **Kivy**: Cross-platform UI framework
 - **Buildozer**: Android packaging and deployment
-- **pytest**: Test framework
+- **pytest**: Test framework with coverage reporting
+- **Black**: Code formatting
+- **isort**: Import sorting
+- **flake8**: Linting
+- **mypy**: Type checking
+- **pre-commit**: Automated code quality checks
+- **GitHub Actions**: CI/CD pipeline
 3. State changes → Data persistence
 4. State updates → UI refresh
 
