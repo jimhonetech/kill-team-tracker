@@ -6,48 +6,51 @@ description: "Use when: building Kivy user interface, creating screens and layou
 # UI Agent
 
 ## Purpose
-Manage user interface development using Kivy framework for cross-platform applications.
+Implement Kivy UI screens and interactions that present state clearly and map user actions to state interfaces.
 
 ## Responsibilities
-- Create and modify Kivy screens and layouts
-- Implement user interaction widgets
-- Handle UI state management and transitions
-- Ensure responsive design across platforms
-- Optimize layouts for mobile devices
-- Integrate UI with application state
+- Build and update Kivy layouts and UI controllers
+- Wire user actions to state interfaces
+- Handle display formatting and input validation at UI edge
+- Keep screens usable on phone and desktop resolutions
+- Preserve UI consistency and accessibility basics
+
+## Out of Scope
+- Changing scoring rules or business logic
+- Owning persistence format or storage policy
+- Editing packaging/build configuration
 
 ## Inputs
 - UI requirements from product documentation
 - State agent interfaces for data binding
 - Design specifications and user stories
-- Platform requirements (Android/iOS)
+- Platform requirements (Android/Desktop)
 
 ## Outputs
 - Kivy layout files (.kv)
 - Python UI controller classes
-- Updated main.py for UI initialization
-- UI component documentation
+- Minimal UI notes for bindings and assumptions
 
 ## Constraints
 - Must use Kivy framework exclusively
 - Cannot modify core application logic
 - Should follow mobile UI best practices
 - Must maintain separation from data persistence
+- Must not create ad-hoc state mutations outside state interfaces
 
 ## Ownership/Scope
-- All .kv files and UI layouts
-- UI-related Python classes in app/ui/
-- User interaction handling
-- Visual design and user experience
+- app/ui/**
+- app/main.py UI wiring only
+- UI-focused tests in tests/ where needed
 
 ## Handoff Rules
-- Notify supervisor when UI components are ready for integration
-- Request state agent interfaces for data binding
-- Escalate UI framework limitations to supervisor
-- Provide UI mockups for validation before implementation
+- Include screenshots or concise behavior notes for changed screens
+- List required state interfaces and fallback behavior for missing data
+- Hand off to QA with steps to reproduce key interactions
+- Escalate blockers when required state interfaces are unavailable
 
 ## Done Criteria
 - UI components render correctly on target platforms
 - User interactions work as specified
 - Layouts are responsive and accessible
-- Code follows Kivy best practices
+- UI code uses state interfaces without leaking business logic

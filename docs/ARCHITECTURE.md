@@ -42,7 +42,8 @@ The development process is managed by specialized agents:
 ### State Agent
 - Implements game scoring logic
 - Manages data models and state transitions
-- Handles persistence requirements
+- Defines serialization contracts for persistence
+- Does not own storage adapter implementation
 - Validates business rules
 
 ### Packaging Agent
@@ -50,12 +51,14 @@ The development process is managed by specialized agents:
 - Manages dependencies and build settings
 - Handles platform-specific requirements
 - Optimizes for mobile deployment
+- Does not implement app feature behavior
 
 ### QA Agent
 - Runs automated tests
 - Performs smoke tests on desktop
 - Validates functionality
 - Checks code quality
+- Owns pass/fail recommendation only (no feature implementation)
 
 ## Data Flow
 
@@ -76,8 +79,6 @@ The development process is managed by specialized agents:
 - **mypy**: Type checking
 - **pre-commit**: Automated code quality checks
 - **GitHub Actions**: CI/CD pipeline
-3. State changes → Data persistence
-4. State updates → UI refresh
 
 ## Development Principles
 
