@@ -20,11 +20,11 @@ Use `docs/TASK_TEMPLATE.md` for new tasks. Keep each task small enough for one s
 - [x] T-101 UI Agent: Create main game screen with turn display
 - [x] T-301 Packaging Agent: Configure pyproject.toml with Kivy dependencies
 - [x] T-202 State Agent: Implement score update methods (increment/decrement)
-- [ ] T-203 State Agent: Add operation selection and bonus calculation logic
-- [ ] T-204 State Agent: Implement new game reset behavior
-- [ ] T-205 State Agent: Add JSON serialization contracts for save/load
+- [x] T-203 State Agent: Add operation selection and bonus calculation logic
+- [x] T-204 State Agent: Implement new game reset behavior
+- [x] T-205 State Agent: Add JSON serialization contracts for save/load
 - [x] T-206 State Agent: Add schema migration guard for future versions
-- [ ] T-102 UI Agent: Implement player score sections (CP, Tac/Kill/Main VP)
+- [x] T-102 UI Agent: Implement player score sections (CP, Tac/Kill/Main VP)
 - [ ] T-103 UI Agent: Add operation selection control for end-game bonus
 - [ ] T-104 UI Agent: Add new game/reset action and confirmation flow
 - [ ] T-105 UI Agent: Add save/resume controls and status feedback
@@ -211,7 +211,7 @@ Notes:
 Task ID: T-203
 Title: Add operation selection and bonus calculation logic
 Owner: State Agent
-State: Backlog
+State: Done
 Depends on: T-201
 Scope:
 - Add operation selection field and bonus computation behavior.
@@ -226,12 +226,15 @@ Handoff Target:
 - QA Agent
 Notes:
 - Keep rules minimal and configurable.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: final score outputs include bonus points and tests cover operation selection plus bonus behavior.
 
 #### T-204
 Task ID: T-204
 Title: Implement new game reset behavior
 Owner: State Agent
-State: Backlog
+State: Done
 Depends on: T-201
 Scope:
 - Reset all tracked values to valid initial state.
@@ -246,12 +249,15 @@ Handoff Target:
 - QA Agent
 Notes:
 - Ensure reset does not leave stale values.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: reset returns canonical initial GameState and tests verify all tracked fields reset.
 
 #### T-205
 Task ID: T-205
 Title: Add JSON serialization contracts for save/load
 Owner: State Agent
-State: Backlog
+State: Done
 Depends on: T-201
 Scope:
 - Define stable to_json/from_json contract for GameState.
@@ -266,12 +272,15 @@ Handoff Target:
 - QA Agent (T-403)
 Notes:
 - Backward-compatible key naming preferred.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: round-trip serialization preserved all required fields and invalid payload handling is covered by deterministic tests.
 
 #### T-102
 Task ID: T-102
 Title: Implement player score sections (CP, Tac/Kill/Main VP)
 Owner: UI Agent
-State: Backlog
+State: Done
 Depends on: T-101, T-202
 Scope:
 - Add score controls/display for both players and categories.
@@ -286,6 +295,9 @@ Handoff Target:
 - QA Agent (T-402)
 Notes:
 - Keep controls symmetric for both players.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: controls update state interfaces and rendered values for both players and all required score categories.
 
 #### T-103
 Task ID: T-103
