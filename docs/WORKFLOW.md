@@ -28,6 +28,7 @@ The workflow is mandatory for code-impacting tasks.
 
 - A task cannot move to `Assigned` without a full task card (owner, scope, out-of-scope, acceptance checks, handoff target).
 - A task cannot move to `In QA` without a specialist handoff using `docs/HANDOFF_TEMPLATE.md`.
+- A task cannot move to `In QA` unless the current owner ran `uv run pre-commit run --all-files` (or documented equivalent scoped hook commands) and fixed blocking failures.
 - A task cannot move to `In Review` without QA pass/fail recommendation and evidence.
 - A task cannot move to `Done` without supervisor acceptance recorded in task notes.
 - Handoffs missing checks run, evidence, or risk notes must be rejected.
@@ -70,9 +71,20 @@ The workflow is mandatory for code-impacting tasks.
 ## Quality Gates
 
 - Specialist self-check completed
+- Pre-commit hooks executed with results recorded in handoff evidence
+- Blocking hook failures fixed before handoff (or task marked Blocked with rationale)
 - QA validation executed (pass/fail with evidence)
 - Risks and follow-ups documented
 - Supervisor acceptance recorded
+
+## Pre-Commit Gate
+
+For all code-impacting tasks:
+
+- Default command: `uv run pre-commit run --all-files`
+- If the full run is impractical, run scoped hooks that cover changed files and document commands exactly.
+- Any `Critical`/`Major` defect from hooks (type errors, lint violations, failing format checks) must be fixed before handoff.
+- If a hook cannot be run due to environment/tooling blockers, mark task `Blocked` and include attempted resolution steps.
 
 ## QA Severity Decision Policy
 

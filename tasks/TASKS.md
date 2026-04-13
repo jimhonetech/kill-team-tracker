@@ -25,15 +25,15 @@ Use `docs/TASK_TEMPLATE.md` for new tasks. Keep each task small enough for one s
 - [x] T-205 State Agent: Add JSON serialization contracts for save/load
 - [x] T-206 State Agent: Add schema migration guard for future versions
 - [x] T-102 UI Agent: Implement player score sections (CP, Tac/Kill/Main VP)
-- [ ] T-103 UI Agent: Add operation selection control for end-game bonus
-- [ ] T-104 UI Agent: Add new game/reset action and confirmation flow
-- [ ] T-105 UI Agent: Add save/resume controls and status feedback
+- [x] T-103 UI Agent: Add operation selection control for end-game bonus
+- [x] T-104 UI Agent: Add new game/reset action and confirmation flow
+- [x] T-105 UI Agent: Add save/resume controls and status feedback
 - [ ] T-302 Packaging Agent: Set up buildozer.spec for Android build
 - [ ] T-303 Packaging Agent: Add local storage permissions
 - [ ] T-304 Packaging Agent: Verify desktop run path with UV
-- [ ] T-402 QA Agent: Implement UI smoke tests for screen loading
-- [ ] T-403 QA Agent: Add integration tests for save/load functionality
-- [ ] T-404 QA Agent: Set up pytest automation baseline
+- [x] T-402 QA Agent: Implement UI smoke tests for screen loading
+- [x] T-403 QA Agent: Add integration tests for save/load functionality
+- [x] T-404 QA Agent: Set up pytest automation baseline
 - [x] T-405 QA Agent: Fix pre-commit mypy hook dependency resolution in CI
 
 ### Task Cards
@@ -303,7 +303,7 @@ Notes:
 Task ID: T-103
 Title: Add operation selection control for end-game bonus
 Owner: UI Agent
-State: Backlog
+State: Done
 Depends on: T-101, T-203
 Scope:
 - Add operation selector and bind to state operation field.
@@ -318,12 +318,15 @@ Handoff Target:
 - QA Agent (T-402)
 Notes:
 - Include safe default selection behavior.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: selected operation persists in state and displayed totals update via state final score outputs when bonus is adjusted.
 
 #### T-104
 Task ID: T-104
 Title: Add new game/reset action and confirmation flow
 Owner: UI Agent
-State: Backlog
+State: Done
 Depends on: T-101, T-204
 Scope:
 - Add reset action and confirmation UX.
@@ -338,12 +341,15 @@ Handoff Target:
 - QA Agent (T-402)
 Notes:
 - Favor low-friction confirmation UX.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: confirmed reset triggers state reset and updates displayed values; cancel path leaves state unchanged.
 
 #### T-105
 Task ID: T-105
 Title: Add save/resume controls and status feedback
 Owner: UI Agent
-State: Backlog
+State: Done
 Depends on: T-101, T-205
 Scope:
 - Add save/resume UI actions and success/failure status messaging.
@@ -358,6 +364,9 @@ Handoff Target:
 - QA Agent (T-403)
 Notes:
 - Ensure non-blocking feedback on mobile.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: save/resume actions trigger storage interface callbacks and failure messages are surfaced in UI status feedback.
 
 #### T-302
 Task ID: T-302
@@ -423,7 +432,7 @@ Notes:
 Task ID: T-402
 Title: Implement UI smoke tests for screen loading
 Owner: QA Agent
-State: Backlog
+State: Done
 Depends on: T-101, T-102
 Scope:
 - Add smoke checks for app startup and main screen render path.
@@ -438,12 +447,17 @@ Handoff Target:
 - Supervisor Agent
 Notes:
 - Keep tests stable and low maintenance.
+- QA handoff result: qa-pass with Minor finding only.
+- Minor finding: `app.main` missing-Kivy fallback branch remains untested in pytest and is outside the primary happy-path smoke scope.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: smoke tests cover direct main-screen rendering and app startup builds the main screen when the Kivy run loop is stubbed.
+- Evidence: `uv run pytest tests/test_ui_smoke.py -q` (2 passed), `uv run flake8 tests/test_ui_smoke.py` (passed), `uv run pytest` (35 passed).
 
 #### T-403
 Task ID: T-403
 Title: Add integration tests for save/load functionality
 Owner: QA Agent
-State: Backlog
+State: Done
 Depends on: T-205, T-105
 Scope:
 - Verify end-to-end state save and restore behavior.
@@ -458,12 +472,17 @@ Handoff Target:
 - Supervisor Agent
 Notes:
 - Use deterministic fixtures.
+- QA handoff result: qa-pass with Minor finding only.
+- Minor finding: `app/main.py` runtime bootstrap path remains untested in pytest coverage and is outside T-403 scope.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: integration tests cover save/load round-trip correctness and corrupted resume payload error handling.
+- Evidence: `uv run pytest tests/test_save_load_integration.py` (2 passed), `uv run pytest` (31 passed).
 
 #### T-404
 Task ID: T-404
 Title: Set up pytest automation baseline
 Owner: QA Agent
-State: Backlog
+State: Done
 Depends on: T-301
 Scope:
 - Define baseline pytest commands and minimal CI-ready expectations.
@@ -478,6 +497,11 @@ Handoff Target:
 - Supervisor Agent
 Notes:
 - Keep setup lightweight.
+- QA handoff result: qa-pass with Minor finding only.
+- Minor finding: targeted automation baseline test emits a coverage `no-data-collected` warning because it validates pytest subprocess exit codes without importing app modules.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- Acceptance verified: default `uv run pytest` command is documented in `docs/DEVELOPMENT.md` and deterministic tests verify both zero and non-zero pytest exit-code behavior.
+- Evidence: `uv run pytest tests/test_pytest_automation_baseline.py -q` (2 passed), `uv run flake8 tests/test_pytest_automation_baseline.py` (passed), `uv run pytest` (33 passed).
 
 #### T-405
 Task ID: T-405
