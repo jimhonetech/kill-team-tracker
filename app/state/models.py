@@ -37,12 +37,14 @@ class PlayerScores:
     tactical_vp: int = 0
     kill_vp: int = 0
     main_mission_vp: int = 0
+    bonus_vp: int = 0
 
     def __post_init__(self) -> None:
         _validate_range("command_points", self.command_points, CP_MIN, CP_MAX)
         _validate_range("tactical_vp", self.tactical_vp, VP_MIN, VP_MAX)
         _validate_range("kill_vp", self.kill_vp, VP_MIN, VP_MAX)
         _validate_range("main_mission_vp", self.main_mission_vp, VP_MIN, VP_MAX)
+        _validate_range("bonus_vp", self.bonus_vp, VP_MIN, VP_MAX)
 
     def to_dict(self) -> dict[str, int]:
         return {
@@ -50,6 +52,7 @@ class PlayerScores:
             "tactical_vp": self.tactical_vp,
             "kill_vp": self.kill_vp,
             "main_mission_vp": self.main_mission_vp,
+            "bonus_vp": self.bonus_vp,
         }
 
     @classmethod
@@ -59,6 +62,7 @@ class PlayerScores:
             tactical_vp=data.get("tactical_vp", 0),
             kill_vp=data.get("kill_vp", 0),
             main_mission_vp=data.get("main_mission_vp", 0),
+            bonus_vp=data.get("bonus_vp", 0),
         )
 
 
@@ -69,6 +73,7 @@ class GameState:
     turning_point: int = 1
     player_one: PlayerScores = field(default_factory=PlayerScores)
     player_two: PlayerScores = field(default_factory=PlayerScores)
+    selected_operation: str | None = None
 
     def __post_init__(self) -> None:
         _validate_range("turning_point", self.turning_point, TURN_MIN, TURN_MAX)
@@ -118,10 +123,49 @@ class GameState:
         setattr(scores, category, updated)
         return updated
 
+    def select_operation(self, operation: str | None) -> str | None:
+        if operation is None:
+            self.selected_operation = None
+            return self.selected_operation
+
+        normalized = operation.strip()
+        if not normalized:
+            raise ValueError("operation must be a non-empty string")
+
+        self.selected_operation = normalized
+        return self.selected_operation
+
+    def set_bonus_vp(self, player: str, points: int) -> int:
+        scores = self._get_player_scores(player)
+        scores.bonus_vp = _apply_bounded_delta(0, points, VP_MIN, VP_MAX)
+        return scores.bonus_vp
+
+    def total_vp(self, player: str) -> int:
+        scores = self._get_player_scores(player)
+        return (
+            scores.tactical_vp
+            + scores.kill_vp
+            + scores.main_mission_vp
+            + scores.bonus_vp
+        )
+
+    def final_scores(self) -> dict[str, int]:
+        return {
+            "player_one": self.total_vp("player_one"),
+            "player_two": self.total_vp("player_two"),
+        }
+
+    def reset_game(self) -> None:
+        self.turning_point = TURN_MIN
+        self.selected_operation = None
+        self.player_one = PlayerScores()
+        self.player_two = PlayerScores()
+
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": SCHEMA_VERSION,
             "turning_point": self.turning_point,
+            "selected_operation": self.selected_operation,
             "players": {
                 "player_one": self.player_one.to_dict(),
                 "player_two": self.player_two.to_dict(),
@@ -137,6 +181,12 @@ class GameState:
         if raw_schema_version is None:
             raise ValueError("schema_version is required")
 
+        if "turning_point" not in data:
+            raise ValueError("turning_point is required")
+
+        if "players" not in data:
+            raise ValueError("players is required")
+
         try:
             schema_version = int(raw_schema_version)
         except (TypeError, ValueError) as exc:
@@ -148,9 +198,17 @@ class GameState:
                 f"expected {SCHEMA_VERSION}"
             )
 
-        turning_point = int(data.get("turning_point", TURN_MIN))
+        turning_point = int(data["turning_point"])
+        selected_operation_raw = data.get("selected_operation")
 
-        players_raw = data.get("players", {})
+        if selected_operation_raw is None:
+            selected_operation = None
+        elif isinstance(selected_operation_raw, str):
+            selected_operation = selected_operation_raw.strip() or None
+        else:
+            raise ValueError("selected_operation must be a string or null")
+
+        players_raw = data["players"]
         if not isinstance(players_raw, dict):
             raise ValueError("players must be a dictionary")
 
@@ -164,11 +222,16 @@ class GameState:
             turning_point=turning_point,
             player_one=PlayerScores.from_dict(player_one_raw),
             player_two=PlayerScores.from_dict(player_two_raw),
+            selected_operation=selected_operation,
         )
 
     @classmethod
     def from_json(cls, payload: str) -> GameState:
-        data = json.loads(payload)
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise ValueError("JSON payload is invalid") from exc
+
         if not isinstance(data, dict):
             raise ValueError("JSON payload must decode to an object")
         return cls.from_dict(data)

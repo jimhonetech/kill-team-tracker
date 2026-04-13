@@ -14,6 +14,22 @@
 - Use descriptive test names
 - Test both success and failure cases
 
+### Pytest Automation Baseline
+
+Use these commands as the repository baseline for local and CI-ready test automation:
+
+```bash
+uv run pytest
+uv run pytest tests/test_pytest_automation_baseline.py -q
+```
+
+Expected behavior:
+
+- `uv run pytest` executes the default suite configured in `pyproject.toml`.
+- `uv run pytest tests/test_pytest_automation_baseline.py -q` verifies automation expectations:
+	- passing tests return exit code `0`
+	- failing tests return non-zero exit code
+
 ## Git Workflow
 
 - Use descriptive commit messages

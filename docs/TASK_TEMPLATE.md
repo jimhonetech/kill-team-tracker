@@ -29,3 +29,4 @@ Notes:
 - Keep tasks small enough for one implementation pass and one QA pass.
 - Write measurable acceptance checks.
 - Explicitly list out-of-scope items to prevent creep.
+- For code-impacting tasks, include a pre-commit check in Acceptance Checks (default: `uv run pre-commit run --all-files`).

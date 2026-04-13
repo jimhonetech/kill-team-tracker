@@ -16,6 +16,7 @@ Scope:
 - <files/areas changed>
 Checks Run:
 - <command>: <result>
+- <pre-commit command>: <result>
 Evidence:
 - <key observations, outputs, screenshots if relevant>
 Risks:
@@ -30,10 +31,12 @@ Requested Action:
 
 - Keep handoff concise and factual.
 - Include only checks that were actually run.
+- Include a pre-commit check line for code-impacting tasks.
 - If blocked, include attempted resolutions.
 - If QA fails, include reproducible steps and severity.
 - Link task ID exactly as shown in `tasks/TASKS.md`.
 - QA handoffs must include `Recommendation` and at least one `Findings` line.
+- Handoffs with unresolved blocking pre-commit failures must be marked `blocked` or `qa-fail`.
 
 ## QA Severity Labels
 

@@ -13,9 +13,10 @@ Use this sequence for every code-impacting task:
 
 1. Supervisor assigns a scoped task.
 2. Specialist agent implements and self-checks.
-3. Specialist hands off to QA using `docs/HANDOFF_TEMPLATE.md`.
-4. QA validates and returns pass/fail handoff.
-5. Supervisor accepts, requests fixes, or reassigns.
+3. Specialist runs pre-commit checks and fixes blocking issues.
+4. Specialist hands off to QA using `docs/HANDOFF_TEMPLATE.md`.
+5. QA validates and returns pass/fail handoff.
+6. Supervisor accepts, requests fixes, or reassigns.
 
 ## 3. Example Prompts
 
@@ -28,7 +29,7 @@ Supervisor Agent: Take task T-201 from tasks/TASKS.md. Confirm owner, scope, acc
 ### Handoff Between Agents
 
 ```text
-State Agent: Complete T-201 within your ownership scope, then produce a handoff using docs/HANDOFF_TEMPLATE.md to QA Agent.
+State Agent: Complete T-201 within your ownership scope, run uv run pre-commit run --all-files and fix blocking failures, then produce a handoff using docs/HANDOFF_TEMPLATE.md to QA Agent.
 ```
 
 ### Ask for Review
@@ -50,6 +51,7 @@ Do:
 - Use task IDs in all messages and handoffs.
 - Keep handoffs short, reproducible, and evidence-based.
 - Escalate blockers early with attempted resolution notes.
+- Include pre-commit command output summary in every code-impacting handoff.
 
 Don't:
 - Let agents edit outside ownership without explicit scope exception.
