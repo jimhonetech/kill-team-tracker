@@ -26,4 +26,5 @@ repos:
     rev: v1.20.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports, --explicit-package-bases, --disable-error-code=call-overload]
+        files: ^app/

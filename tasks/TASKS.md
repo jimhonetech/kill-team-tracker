@@ -34,6 +34,7 @@ Use `docs/TASK_TEMPLATE.md` for new tasks. Keep each task small enough for one s
 - [ ] T-402 QA Agent: Implement UI smoke tests for screen loading
 - [ ] T-403 QA Agent: Add integration tests for save/load functionality
 - [ ] T-404 QA Agent: Set up pytest automation baseline
+- [x] T-405 QA Agent: Fix pre-commit mypy hook dependency resolution in CI
 
 ### Task Cards
 
@@ -465,6 +466,33 @@ Handoff Target:
 - Supervisor Agent
 Notes:
 - Keep setup lightweight.
+
+#### T-405
+Task ID: T-405
+Title: Fix pre-commit mypy hook dependency resolution in CI
+Owner: QA Agent
+State: Done
+Depends on: T-404
+Scope:
+- Update mypy pre-commit hook configuration to avoid failing `types-all` dependency resolution.
+- Keep type-checking behavior practical for this repository.
+- Confirmed CI failure scope: mypy hook environment install fails on `types-all` due to missing `types-pkg-resources`.
+Out of Scope:
+- Refactoring application feature code.
+- Introducing heavy new CI tooling.
+Acceptance Checks:
+- `pre-commit` installs mypy hook environment without dependency resolution errors.
+- `uv run pre-commit run mypy --all-files` executes successfully in CI-equivalent environment.
+Deliverables:
+- Updated `.pre-commit-config.yaml` and any minimal related QA tooling notes.
+Handoff Target:
+- Supervisor Agent
+Notes:
+- Triggered by CI failure: `No matching distribution found for types-pkg-resources` from `types-all`.
+- Supervisor handoff: QA Agent to apply tooling-only fix in `.pre-commit-config.yaml` and validate with `uv run pre-commit run mypy --all-files`.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
+- CI-equivalent validation command now passes: `uv run pre-commit run mypy --all-files`.
 
 ## Completed Tasks
 
