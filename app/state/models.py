@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
+from dataclasses import dataclass, field
 
 TURN_MIN = 1
 TURN_MAX = 4
@@ -83,13 +83,17 @@ class GameState:
     def increment_command_points(self, player: str, amount: int = 1) -> int:
         _validate_positive_amount(amount)
         scores = self._get_player_scores(player)
-        scores.command_points = _apply_bounded_delta(scores.command_points, amount, CP_MIN, CP_MAX)
+        scores.command_points = _apply_bounded_delta(
+            scores.command_points, amount, CP_MIN, CP_MAX
+        )
         return scores.command_points
 
     def decrement_command_points(self, player: str, amount: int = 1) -> int:
         _validate_positive_amount(amount)
         scores = self._get_player_scores(player)
-        scores.command_points = _apply_bounded_delta(scores.command_points, -amount, CP_MIN, CP_MAX)
+        scores.command_points = _apply_bounded_delta(
+            scores.command_points, -amount, CP_MIN, CP_MAX
+        )
         return scores.command_points
 
     def increment_vp(self, player: str, category: str, amount: int = 1) -> int:
@@ -140,7 +144,8 @@ class GameState:
 
         if schema_version != SCHEMA_VERSION:
             raise ValueError(
-                f"unsupported schema_version: {schema_version}; expected {SCHEMA_VERSION}"
+                f"unsupported schema_version: {schema_version}; "
+                f"expected {SCHEMA_VERSION}"
             )
 
         turning_point = int(data.get("turning_point", TURN_MIN))

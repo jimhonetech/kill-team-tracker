@@ -8,7 +8,9 @@ def main() -> None:
     try:
         from kivy.app import App
     except ModuleNotFoundError:
-        print("Kivy is not installed. Complete packaging/setup tasks before running UI.")
+        print(
+            "Kivy is not installed. Complete packaging/setup tasks before running UI."
+        )
         return
 
     from app.state import GameState

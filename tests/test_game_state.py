@@ -32,8 +32,12 @@ def test_player_scores_reject_invalid_ranges() -> None:
 def test_game_state_serialization_round_trip() -> None:
     original = GameState(
         turning_point=3,
-        player_one=PlayerScores(command_points=2, tactical_vp=4, kill_vp=3, main_mission_vp=5),
-        player_two=PlayerScores(command_points=1, tactical_vp=2, kill_vp=6, main_mission_vp=4),
+        player_one=PlayerScores(
+            command_points=2, tactical_vp=4, kill_vp=3, main_mission_vp=5
+        ),
+        player_two=PlayerScores(
+            command_points=1, tactical_vp=2, kill_vp=6, main_mission_vp=4
+        ),
     )
 
     payload = original.to_json()
