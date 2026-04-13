@@ -117,7 +117,6 @@ dmypy.json
 .kivy/
 
 # Buildozer
-buildozer.spec
 buildozer/
 
 # Android builds
