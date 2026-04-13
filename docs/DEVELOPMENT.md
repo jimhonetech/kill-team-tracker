@@ -28,6 +28,24 @@
 - Update task status in TASKS.md
 - Request supervisor review for scope changes
 
+## Desktop Setup and Run
+
+Use these commands for local desktop development with Kivy:
+
+```bash
+uv sync --dev
+uv run python -c "import kivy; print(kivy.__version__)"
+uv run python -c "from app.state import GameState; from app.ui.main_screen import MainGameScreen; screen = MainGameScreen(GameState()); print(screen.turning_point_label.text)"
+uv run python -m app.main
+```
+
+Expected smoke output before full app run:
+
+- `kivy` version prints successfully.
+- Turning point smoke check prints `Turning Point 1`.
+
+If running on a headless environment, use only the smoke commands and skip `uv run python -m app.main`.
+
 ## Performance
 
 - Profile code before optimizing

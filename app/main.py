@@ -1,15 +1,27 @@
 #!/usr/bin/env python3
-"""
-Kill Team Tracker - Main Application Entry Point
+"""Kill Team Tracker application entry point for UI startup."""
 
-This is a temporary placeholder. The full Kivy application will be implemented
-by the UI and State agents according to the multi-agent workflow.
-"""
+from __future__ import annotations
 
-def main():
-    print("Kill Team Tracker - Placeholder")
-    print("This will be replaced with the full Kivy application.")
-    # TODO: Initialize Kivy app with proper screens and state management
+
+def main() -> None:
+    try:
+        from kivy.app import App
+    except ModuleNotFoundError:
+        print(
+            "Kivy is not installed. Complete packaging/setup tasks before running UI."
+        )
+        return
+
+    from app.state import GameState
+    from app.ui import MainGameScreen
+
+    class KillTeamTrackerApp(App):
+        def build(self) -> MainGameScreen:
+            return MainGameScreen(game_state=GameState())
+
+    KillTeamTrackerApp().run()
+
 
 if __name__ == "__main__":
     main()

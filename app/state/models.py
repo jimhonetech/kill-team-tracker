@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
+from dataclasses import dataclass, field
 
 TURN_MIN = 1
 TURN_MAX = 4
@@ -12,11 +12,21 @@ CP_MAX = 6
 VP_MIN = 0
 VP_MAX = 15
 SCHEMA_VERSION = 1
+VP_CATEGORIES = ("tactical_vp", "kill_vp", "main_mission_vp")
 
 
 def _validate_range(name: str, value: int, minimum: int, maximum: int) -> None:
     if not minimum <= value <= maximum:
         raise ValueError(f"{name} must be between {minimum} and {maximum}, got {value}")
+
+
+def _validate_positive_amount(amount: int) -> None:
+    if amount <= 0:
+        raise ValueError(f"amount must be positive, got {amount}")
+
+
+def _apply_bounded_delta(current: int, delta: int, minimum: int, maximum: int) -> int:
+    return max(minimum, min(maximum, current + delta))
 
 
 @dataclass(slots=True)
@@ -63,6 +73,51 @@ class GameState:
     def __post_init__(self) -> None:
         _validate_range("turning_point", self.turning_point, TURN_MIN, TURN_MAX)
 
+    def _get_player_scores(self, player: str) -> PlayerScores:
+        if player == "player_one":
+            return self.player_one
+        if player == "player_two":
+            return self.player_two
+        raise ValueError(f"unknown player: {player}")
+
+    def increment_command_points(self, player: str, amount: int = 1) -> int:
+        _validate_positive_amount(amount)
+        scores = self._get_player_scores(player)
+        scores.command_points = _apply_bounded_delta(
+            scores.command_points, amount, CP_MIN, CP_MAX
+        )
+        return scores.command_points
+
+    def decrement_command_points(self, player: str, amount: int = 1) -> int:
+        _validate_positive_amount(amount)
+        scores = self._get_player_scores(player)
+        scores.command_points = _apply_bounded_delta(
+            scores.command_points, -amount, CP_MIN, CP_MAX
+        )
+        return scores.command_points
+
+    def increment_vp(self, player: str, category: str, amount: int = 1) -> int:
+        _validate_positive_amount(amount)
+        if category not in VP_CATEGORIES:
+            raise ValueError(f"unknown VP category: {category}")
+
+        scores = self._get_player_scores(player)
+        current = getattr(scores, category)
+        updated = _apply_bounded_delta(current, amount, VP_MIN, VP_MAX)
+        setattr(scores, category, updated)
+        return updated
+
+    def decrement_vp(self, player: str, category: str, amount: int = 1) -> int:
+        _validate_positive_amount(amount)
+        if category not in VP_CATEGORIES:
+            raise ValueError(f"unknown VP category: {category}")
+
+        scores = self._get_player_scores(player)
+        current = getattr(scores, category)
+        updated = _apply_bounded_delta(current, -amount, VP_MIN, VP_MAX)
+        setattr(scores, category, updated)
+        return updated
+
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": SCHEMA_VERSION,
@@ -89,7 +144,8 @@ class GameState:
 
         if schema_version != SCHEMA_VERSION:
             raise ValueError(
-                f"unsupported schema_version: {schema_version}; expected {SCHEMA_VERSION}"
+                f"unsupported schema_version: {schema_version}; "
+                f"expected {SCHEMA_VERSION}"
             )
 
         turning_point = int(data.get("turning_point", TURN_MIN))

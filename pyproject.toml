@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Kill Team score tracker for Warhammer 40k"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "kivy>=2.3.1,<2.4.0",
+]
 
 [tool.black]
 line-length = 88
