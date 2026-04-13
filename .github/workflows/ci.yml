@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      KIVY_NO_ARGS: "1"
 
     steps:
     - uses: actions/checkout@v4
@@ -22,11 +24,14 @@ jobs:
     - name: Install dependencies
       run: uv sync --dev
 
+    - name: Install headless UI dependencies
+      run: sudo apt-get update && sudo apt-get install -y xvfb
+
     - name: Run pre-commit
       run: uv run pre-commit run --all-files
 
     - name: Run tests
-      run: uv run pytest --cov=app --cov-report=xml
+      run: xvfb-run -a uv run pytest --cov=app --cov-report=xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
