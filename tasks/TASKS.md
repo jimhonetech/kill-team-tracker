@@ -17,9 +17,9 @@ Use `docs/TASK_TEMPLATE.md` for new tasks. Keep each task small enough for one s
 - [x] T-001 Supervisor: Review v1 requirements and assign initial implementation task
 - [x] T-201 State Agent: Define GameState model with turn, players, scores
 - [ ] T-401 QA Agent: Create unit tests for state models and calculations
-- [ ] T-101 UI Agent: Create main game screen with turn display
-- [ ] T-301 Packaging Agent: Configure pyproject.toml with Kivy dependencies
-- [ ] T-202 State Agent: Implement score update methods (increment/decrement)
+- [x] T-101 UI Agent: Create main game screen with turn display
+- [x] T-301 Packaging Agent: Configure pyproject.toml with Kivy dependencies
+- [x] T-202 State Agent: Implement score update methods (increment/decrement)
 - [ ] T-203 State Agent: Add operation selection and bonus calculation logic
 - [ ] T-204 State Agent: Implement new game reset behavior
 - [ ] T-205 State Agent: Add JSON serialization contracts for save/load
@@ -136,7 +136,7 @@ Notes:
 Task ID: T-101
 Title: Create main game screen with turn display
 Owner: UI Agent
-State: Backlog
+State: Done
 Depends on: T-201
 Scope:
 - Build base screen and visible turning point display.
@@ -151,12 +151,19 @@ Handoff Target:
 - QA Agent (T-402)
 Notes:
 - Must not bypass state interfaces.
+- QA handoff result: qa-fail with Major finding.
+- Blocker: Kivy is missing in QA environment, so runtime UI load check could not be verified.
+- Unblock task assigned: T-301 (Packaging Agent).
+- Supervisor update: blocker resolved by T-301 qa-pass; T-101 re-opened for QA runtime screen-load revalidation.
+- QA revalidation result: qa-pass.
+- Supervisor decision: accepted per QA severity policy.
+- Minor non-blocking warning recorded: /dev/input/event5 permission warning observed on Linux host during startup.
 
 #### T-301
 Task ID: T-301
 Title: Configure pyproject.toml with Kivy dependencies
 Owner: Packaging Agent
-State: Backlog
+State: Done
 Depends on: none
 Scope:
 - Add/verify runtime dependencies for desktop development path.
@@ -171,12 +178,16 @@ Handoff Target:
 - QA Agent (T-404)
 Notes:
 - Minimize dependency footprint.
+- Assigned as unblock task for T-101 runtime UI validation.
+- Packaging execution complete; awaiting QA validation.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted; dependency/setup path validated for T-101 revalidation.
 
 #### T-202
 Task ID: T-202
 Title: Implement score update methods (increment/decrement)
 Owner: State Agent
-State: Backlog
+State: Done
 Depends on: T-201
 Scope:
 - Add bounded increment/decrement methods for score categories and CP.
@@ -191,6 +202,9 @@ Handoff Target:
 - QA Agent
 Notes:
 - Keep methods deterministic and side-effect limited.
+- Assigned by Supervisor as the next implementation task after T-101 acceptance.
+- QA handoff result: qa-pass with Minor finding only.
+- Supervisor decision: accepted per QA severity policy (Minor is non-blocking).
 
 #### T-203
 Task ID: T-203
