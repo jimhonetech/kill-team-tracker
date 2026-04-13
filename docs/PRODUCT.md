@@ -6,7 +6,7 @@ Kill Team Tracker is a mobile app for Warhammer 40k Kill Team players to track e
 
 ## V1 Core Features
 
-- **Turn Tracking**: Display current turning point (1-5)
+- **Turn Tracking**: Display current turning point (1-4)
 - **Command Points**: Track each player's command points (0-6)
 - **Victory Points**:
   - Tactical Objective VP (0-15 per player)
