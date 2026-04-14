@@ -43,13 +43,22 @@ Use `docs/TASK_TEMPLATE.md` for new tasks. Keep each task small enough for one s
 - [x] T-501 State Agent: Implement file-backed storage adapter (real JSON persistence)
 - [x] T-504 UI Agent: Wire save/resume buttons to storage adapter
 - [x] T-505 QA Agent: Add end-to-end persistence tests using real file I/O
-- [~] T-506 Supervisor: V2 review — accept Android + persistence delivery
+- [x] T-506 Supervisor: V2 review — accept Android + persistence delivery
 - [x] T-507 Packaging Agent: Raise Android target SDK/API and rebuild debug APK
 - [x] T-508 QA Agent: Validate install flow and run on-device smoke test
 - [x] T-509 Supervisor: Accept Android target uplift and close V2
 - [x] T-510 UI Agent: Fix top-level Android entrypoint to launch the Kivy app
 - [x] T-511 QA Agent: Rebuild APK and rerun on-device startup smoke test
 - [x] T-512 Supervisor: Accept startup fix and resume V2 closeout
+- [x] T-513 UI Agent: Rename score labels to Tac Op, Kill Op, Crit Op
+- [!] T-514 UI Agent: Remove operation selection UI and state wiring (SUPERSEDED — see T-516/T-517)
+- [x] T-515 UI Agent: Add turning point increment/decrement controls
+- [x] T-516 State Agent: Add per-player secret op selection and end-game state
+- [x] T-517 UI Agent: Add end-game flow with per-player secret op reveal
+- [x] T-518 Packaging Agent: Rebuild APK and install latest build to attached device
+- [x] T-519 QA Agent: Validate on-device flow for turning points and end-game secret ops
+- [x] T-520 State Agent: Calculate bonus VP automatically (50% of selected op, rounded up)
+- [x] T-521 UI Agent: Display end-game summary with bonus calculation breakdown
 
 ### Task Cards
 
@@ -759,6 +768,290 @@ Notes:
 - **Supervisor Decision**: ACCEPT. Startup regression is fully resolved. T-510 fix is minimal and safe. T-511 validation confirms app now runs to completion on real hardware. V2 is ready for final closeout review (T-506).
 - **Completion Note**: All V2 implementation, QA, and packaging are complete. App is live, tests pass, and on-device validation succeeded.
 
+#### T-513
+Task ID: T-513
+Title: Rename score labels to Tac Op, Kill Op, Crit Op
+Owner: UI Agent
+State: Done
+Depends on: none
+Scope:
+- Rename UI display labels only:
+  - "Tactical VP" → "Tac Op"
+  - "Kill VP" → "Kill Op"
+  - "Main VP" → "Crit Op"
+- Update `SCORE_ROWS` tuple in `app/ui/main_screen.py`
+Out of Scope:
+- Renaming internal state field names (`tactical_vp`, `kill_vp`, `main_mission_vp`) — these are serialization keys and must not change
+- Any scoring logic changes
+Acceptance Checks:
+- On-screen labels show "Tac Op", "Kill Op", "Crit Op" for each player
+- Internal state field names and JSON serialization keys are unchanged
+- `uv run pytest` passes (no regressions)
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated `app/ui/main_screen.py`
+Handoff Target:
+- QA Agent
+Notes:
+- Label rename only; do not touch state models or serialization.
+- QA result: qa-pass, no findings. 44 tests passed, pre-commit clean.
+- Supervisor decision: ACCEPT. Labels updated to Tac Op / Kill Op / Crit Op; state field names unchanged.
+
+#### T-514
+Task ID: T-514
+Title: Remove operation selection UI and state wiring
+Owner: UI Agent
+State: Superseded
+Depends on: none
+Notes:
+- SUPERSEDED by T-516 and T-517. The operation selection is not being removed — it is being redesigned as a per-player end-game secret op reveal mechanic. Do not implement T-514.
+
+#### T-515
+Task ID: T-515
+Title: Add turning point increment/decrement controls
+Owner: UI Agent
+State: Done
+Depends on: none
+Scope:
+- Add +/- buttons adjacent to the turning point display in `app/ui/main_screen.py`
+- Wire buttons to `game_state.turning_point` with bounds (min 1, max 4 per `TURN_MIN`/`TURN_MAX` in models)
+- Update the turning point label on change
+Out of Scope:
+- Changing the turn bounds in state models
+- Any scoring or persistence logic changes
+Acceptance Checks:
+- Tapping + advances turning point from 1→2→3→4 and stops at 4
+- Tapping - decrements turning point and stops at 1
+- Turning point label updates immediately on press
+- `uv run pytest` passes (no regressions)
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated `app/ui/main_screen.py`
+- Test covering turning point button behavior
+Handoff Target:
+- QA Agent
+Notes:
+- Bounds are already defined in `app/state/models.py` as `TURN_MIN = 1` and `TURN_MAX = 4`.
+- QA result: qa-pass, no findings. 45 tests passed, pre-commit clean, TURN_MIN/TURN_MAX used (no hardcoded bounds).
+- Supervisor decision: ACCEPT. Turning point +/- controls functional with correct boundary clamping.
+
+#### T-516
+Task ID: T-516
+Title: Add per-player secret op selection and end-game state
+Owner: State Agent
+State: Done
+Depends on: none
+Scope:
+- Add a per-player `secret_op` field to `PlayerScores` (one of: `"tac_op"`, `"kill_op"`, `"crit_op"`, or `None`)
+- Add an `end_game` boolean flag to `GameState` (True when the game has advanced past turning point 4)
+- Add a method to `GameState` to record each player's secret op selection
+- Bonus VP for a player is awarded based on which op they selected (exact scoring rule TBD — for now, store the selection; bonus VP entry remains manual)
+- Update `to_json` / `from_json` to include new fields
+- Increment `SCHEMA_VERSION` to guard against stale saves
+Out of Scope:
+- UI changes
+- Automatic bonus VP calculation (manual entry via existing bonus VP row is sufficient for now)
+Acceptance Checks:
+- `PlayerScores` holds `secret_op` with valid values or `None`
+- `GameState.end_game` is `False` by default and can be set to `True`
+- New fields round-trip through `to_json` / `from_json` without data loss
+- Loading a save with the old schema version raises a deterministic error
+- `uv run pytest` passes
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated `app/state/models.py`
+- Updated unit tests
+Handoff Target:
+- QA Agent, then UI Agent (T-517)
+Notes:
+- Valid secret op values: `"tac_op"`, `"kill_op"`, `"crit_op"`. Any other value should raise `ValueError`.
+- The existing `selected_operation` string field on `GameState` is now superseded by per-player `secret_op`; retain it for migration but do not expose it in new UI.
+- QA result: qa-pass, no findings. 52 tests passed, pre-commit clean. SCHEMA_VERSION bumped to 2.
+- Supervisor decision: ACCEPT. Per-player secret_op, end_game flag, set_secret_op method, round-trip serialization, and reset all validated.
+
+#### T-517
+Task ID: T-517
+Title: Add end-game flow with per-player secret op reveal
+Owner: UI Agent
+State: Done
+Depends on: T-516, T-515
+Scope:
+- When turning point advances past 4 (or a dedicated "End Game" button is pressed at TP 4), transition to an end-game screen or modal
+- Each player independently reveals their chosen secret op: Tac Op, Kill Op, or Crit Op
+- Selections are written to state via the method added in T-516
+- After both players have selected, show a summary of chosen ops alongside current scores
+- Remove the current global operation selector from the main screen (it is replaced by this per-player end-game flow)
+Out of Scope:
+- Automatic bonus VP calculation — players continue to enter bonus VP manually
+- Any state model changes (handled in T-516)
+Acceptance Checks:
+- End-game flow is reachable from the main screen at turning point 4
+- Each player has an independent Tac Op / Kill Op / Crit Op selection
+- Selections are persisted in state and survive save/resume
+- Global operation selector from V1 is no longer visible
+- `uv run pytest` passes
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated `app/ui/main_screen.py` (and/or new screen file)
+- Smoke test covering the end-game selection path
+Handoff Target:
+- QA Agent
+Notes:
+- Design priority is functional over polished — a simple button group per player is sufficient.
+- Depends on T-515 so turning point navigation exists before end-game trigger is wired.
+- QA result: qa-pass, no findings. 52 tests passed, pre-commit clean. Old operation selector confirmed absent.
+- Supervisor decision: ACCEPT. End-game flow triggers at TP 4, per-player op selection wired to state, legacy selector removed, score controls remain usable.
+
+#### T-518
+Task ID: T-518
+Title: Rebuild APK and install latest build to attached device
+Owner: Packaging Agent
+State: Done
+Depends on: T-513, T-515, T-516, T-517
+Scope:
+- Build a fresh debug APK including the latest UI/state updates.
+- Install the APK to the currently attached Android device via ADB.
+- Record artifact path and install outcome.
+Out of Scope:
+- Functional QA of gameplay interactions (handled by T-519).
+- Release signing/publishing.
+Acceptance Checks:
+- Build command completes successfully and produces a debug APK in `bin/`.
+- `adb install -r` completes successfully on attached device.
+- Build/install evidence recorded in Notes.
+Deliverables:
+- Updated APK artifact in `bin/`.
+- Build/install logs summary in task notes.
+Handoff Target:
+- QA Agent (T-519)
+Notes:
+- Device detected via `adb devices -l`: `SM_A536B` (`RZCT203KY2D`).
+- Build command run:
+  - `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 && uv run --with buildozer --with setuptools --with pip --with appdirs --with 'cython<3' buildozer android debug`
+- Build result: `BUILD SUCCESSFUL`; output APK confirmed as `bin/killteamtracker-0.1.0-arm64-v8a-debug.apk`.
+- Install command run:
+  - `adb install -r bin/killteamtracker-0.1.0-arm64-v8a-debug.apk`
+- Install result: `Success`.
+- Post-install smoke check: process alive (`adb shell pidof org.honej.killteamtracker` returned PID `30889`).
+
+#### T-519
+Task ID: T-519
+Title: Validate on-device flow for turning points and end-game secret ops
+Owner: QA Agent
+State: Done
+Depends on: T-518
+Scope:
+- Launch installed app on device and verify turning point +/- behavior.
+- Verify TP+ at TP4 enters end-game mode.
+- Verify each player can independently select Tac Op/Kill Op/Crit Op.
+- Verify score controls remain usable during end game.
+Out of Scope:
+- Implementing fixes.
+Acceptance Checks:
+- App launches and remains stable on device.
+- TP controls and end-game flow match expected behavior.
+- Findings documented with severity if issues are present.
+Deliverables:
+- QA on-device smoke report.
+Handoff Target:
+- Supervisor Agent
+Notes:
+- QA result: qa-blocked. No connected Android device/emulator available via ADB, so required on-device checks could not be executed.
+- Evidence: `adb devices -l` returned no devices; `adb install -r ./bin/killteamtracker-0.1.0-arm64-v8a-debug.apk` failed with `no devices/emulators found`.
+- Supervisor decision: BLOCKED pending attached device or emulator; rerun T-519 QA once hardware is available.
+- User update: device connected and app run confirmed on phone (manual on-device launch smoke pass).
+- Supervisor decision: ACCEPT with deferred detailed gameplay notes; user will provide additional feedback later for any new follow-up tickets.
+
+#### T-520
+Task ID: T-520
+Title: Calculate bonus VP automatically (50% of selected op, rounded up)
+Owner: State Agent
+State: Done
+Depends on: T-516
+Scope:
+- Add a method `GameState.calculate_bonus_vp(player: str) -> int` that:
+  - Returns the bonus VP for the player based on their `secret_op` selection
+  - Formula: `ceil(op_vp / 2)` where op_vp is the VP score of the selected op
+  - Returns 0 if `secret_op` is `None`
+  - Valid primary ops and their score sources:
+    - `"tac_op"` → use `tactical_vp`
+    - `"kill_op"` → use `kill_vp`
+    - `"crit_op"` → use `main_mission_vp`
+- Import `math.ceil` for rounding
+- Add unit tests covering:
+  - Each op type with various VP values (1, 2, 3, 4, 5, 6)
+  - Verify ceil behavior (e.g., 5 VP → bonus 3, 6 VP → bonus 3, 1 VP → bonus 1)
+  - None secret_op returns 0
+  - Invalid op raises ValueError
+- Do NOT modify the manual `bonus_vp` field yet — that will be removed in a follow-up UI task
+Out of Scope:
+- UI changes
+- Replacing the manual bonus_vp field in the state
+Acceptance Checks:
+- `calculate_bonus_vp` method exists and uses ceil(vp / 2) logic
+- Tests cover all op types and edge cases
+- `uv run pytest -q` passes
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated `app/state/models.py` with new method
+- Updated unit tests in `tests/test_game_state.py`
+Handoff Target:
+- QA Agent, then UI Agent (T-521)
+Notes:
+- Rounding rule per Kill Team user content: "round UP" — `ceil` is correct
+- Max bonus from one op: ceil(6 / 2) = 3
+- Total score including bonus: cmd_points + tac_vp + kill_vp + crit_vp + bonus_vp ≤ 21+6 = max
+- QA result: qa-pass, no findings. `uv run pytest -q` (74 passed), `uv run pre-commit run --all-files` (all hooks passed).
+- Supervisor decision: ACCEPT. `calculate_bonus_vp` and test coverage satisfy all acceptance checks; dependency for T-521 is fulfilled.
+
+#### T-521
+Task ID: T-521
+Title: Display end-game summary with bonus calculation breakdown
+Owner: UI Agent
+State: Done
+Depends on: T-520, T-517
+Scope:
+- When end-game is triggered and both players have selected their secret ops, show an end-game summary view/modal that displays:
+  - For each player:
+    - Label: "Player X Summary"
+    - Show the three op scores (Tac Op, Kill Op, Crit Op)
+    - Highlight the selected Primary Op
+    - Show the bonus calculation: "Primary Op: Y VP → Bonus: Z (ceil(Y/2))"
+    - Show total score: base_vp_sum + bonus
+- The summary should be reached after both players select their secret op (or provide a "View Summary" button)
+- Include a way to proceed (e.g., "Done" button to return to main game or save state)
+Out of Scope:
+- Removing manual bonus_vp entry controls yet (will be removed when auto-calc is fully integrated)
+- Changing scoring logic
+Acceptance Checks:
+- End-game summary displays selected Primary Op with visual emphasis
+- Bonus calculation shown as "ceil(primary_op_vp / 2)"
+- Total score displayed correctly
+- Summary reachable from end-game mode
+- `uv run pytest -q` passes
+- `uv run pre-commit run --all-files` passes
+Deliverables:
+- Updated end-game UI in `app/ui/main_screen.py`
+- Smoke test for summary display path
+Handoff Target:
+- QA Agent
+Notes:
+- Design can be simple text + numbers; no animation needed
+- Example summary text:
+  ```
+  Player 1 Summary:
+  Crit Op: 4 VP
+  Kill Op: 5 VP (PRIMARY) ← highlighted
+  Tac Op: 3 VP
+
+  Bonus: Kill Op = ceil(5/2) = 3 VP
+  Total: 4 + 5 + 3 + 3 = 15 VP
+  ```
+- UI implementation result: end-game summary now appears after both players reveal secret ops and includes PRIMARY marker, formula bonus text, and total breakdown.
+- QA result: qa-pass, no findings. `uv run pytest -q` (76 passed), `uv run pre-commit run --all-files` (all hooks passed).
+- Supervisor decision: ACCEPT. Summary reachability, primary-op emphasis, bonus formula display, and total display meet acceptance checks.
+- Follow-up risk (Minor, non-blocking): fixed summary container height may clip on smaller displays; track as UX tuning if reported.
+
 #### T-509
 Task ID: T-509
 Title: Accept Android target uplift and close V2
@@ -852,7 +1145,7 @@ Handoff Target:
 Task ID: T-506
 Title: V2 review — accept Android and persistence delivery
 Owner: Supervisor Agent
-State: Assigned
+State: Done
 Depends on: T-505, T-509, T-512
 Scope:
 - Accept or reject T-505 and Android phone-validation evidence from T-507, T-508, T-510, T-511
@@ -870,6 +1163,9 @@ Handoff Target:
 Notes:
 - Blocked until T-509 and T-512 supervisory reviews are complete.
 - T-505 (E2E persistence tests) and T-507/T-508/T-510/T-511 (Android target uplift and startup fix) evidence is ready for final acceptance review.
+- Evidence review complete: dependency tasks T-505, T-509, and T-512 are Done and acceptance notes are present.
+- Supervisor decision: ACCEPT. V2 Android + persistence delivery is complete and auditable.
+- V3 follow-up tracked: T-519 is currently blocked on device availability for additional on-device gameplay QA.
 
 ---
 
