@@ -1,6 +1,6 @@
-def main():
-    print("Hello from kill-team-tracker!")
+"""Repository-level startup entrypoint for desktop and Android packaging."""
 
+from app.main import main
 
 if __name__ == "__main__":
     main()
