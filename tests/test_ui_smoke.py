@@ -14,7 +14,9 @@ def test_main_game_screen_loads_with_default_state() -> None:
 
     assert screen.title_label.text == "Kill Team Tracker"
     assert screen.turning_point_label.text == "Turning Point 1"
-    assert screen.operation_label.text == "Operation: None"
+    assert not hasattr(screen, "operation_label")
+    assert not hasattr(screen, "operation_controls")
+    assert screen.end_game_controls.height == 0
     assert screen.total_value_labels["player_one"].text == "0"
     assert screen.total_value_labels["player_two"].text == "0"
 

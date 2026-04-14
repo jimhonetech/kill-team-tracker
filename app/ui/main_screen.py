@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from typing import cast
 
 from kivy.uix.boxlayout import BoxLayout
@@ -10,17 +11,26 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 
 from app.state import GameState
+from app.state.models import TURN_MAX, TURN_MIN
 
 
 class MainGameScreen(BoxLayout):
     """Main screen with turning point and both players' core score sections."""
 
-    OPERATIONS = ("Secure Objective", "Infiltration", "Recon Sweep")
+    SECRET_OPS = (
+        ("Tac Op", "tac_op"),
+        ("Kill Op", "kill_op"),
+        ("Crit Op", "crit_op"),
+    )
+    SECRET_OP_LABELS = {op: label for label, op in SECRET_OPS}
+    SECRET_OP_BUTTON_COLOR = (0.2, 0.2, 0.2, 1)
+    SECRET_OP_SELECTED_COLOR = (0.78, 0.61, 0.16, 1)
+    SUMMARY_PRIMARY_MARKER = "[PRIMARY]"
     SCORE_ROWS = (
         ("Command Points", "cp", None),
-        ("Tactical VP", "vp", "tactical_vp"),
-        ("Kill VP", "vp", "kill_vp"),
-        ("Main VP", "vp", "main_mission_vp"),
+        ("Tac Op", "vp", "tactical_vp"),
+        ("Kill Op", "vp", "kill_vp"),
+        ("Crit Op", "vp", "main_mission_vp"),
     )
 
     def __init__(self, game_state: GameState, **kwargs: object) -> None:
@@ -40,26 +50,18 @@ class MainGameScreen(BoxLayout):
         self.score_value_labels: dict[tuple[str, str], Label] = {}
         self.total_value_labels: dict[str, Label] = {}
         self.bonus_buttons: dict[str, tuple[Button, Button]] = {}
+        self.secret_op_buttons: dict[tuple[str, str], Button] = {}
+        self.secret_op_status_labels: dict[str, Label] = {}
+        self.summary_player_labels: dict[str, Label] = {}
 
         self.title_label = Label(
             text="Kill Team Tracker",
             font_size="28sp",
             size_hint=(1, 0.1),
         )
-        self.turning_point_label = Label(
-            text="",
-            font_size="32sp",
-            bold=True,
-            size_hint=(1, 0.08),
-        )
-
-        self.operation_label = Label(
-            text="",
-            font_size="20sp",
-            size_hint=(1, 0.06),
-        )
-
-        self.operation_controls = self._build_operation_controls()
+        self.turning_point_controls = self._build_turning_point_controls()
+        self.end_game_controls = self._build_end_game_controls()
+        self.end_game_summary = self._build_end_game_summary()
         self.persistence_controls = self._build_persistence_controls()
         self.reset_controls = self._build_reset_controls()
 
@@ -77,30 +79,95 @@ class MainGameScreen(BoxLayout):
         )
 
         self.add_widget(self.title_label)
-        self.add_widget(self.turning_point_label)
-        self.add_widget(self.operation_label)
-        self.add_widget(self.operation_controls)
+        self.add_widget(self.turning_point_controls)
+        self.add_widget(self.end_game_controls)
+        self.add_widget(self.end_game_summary)
         self.add_widget(self.persistence_controls)
         self.add_widget(self.reset_controls)
         self.add_widget(self.player_sections)
         self.refresh_from_state()
 
-    def _build_operation_controls(self) -> BoxLayout:
-        controls = BoxLayout(orientation="horizontal", spacing=8, size_hint=(1, 0.06))
+    def _build_turning_point_controls(self) -> BoxLayout:
+        controls = BoxLayout(orientation="horizontal", spacing=8, size_hint=(1, 0.08))
+        self.turning_point_decrement_button = Button(
+            text="-",
+            size_hint=(0.2, 1),
+            on_press=lambda _instance: self._adjust_turning_point(-1),
+        )
+        self.turning_point_label = Label(
+            text="",
+            font_size="32sp",
+            bold=True,
+            size_hint=(0.6, 1),
+        )
+        self.turning_point_increment_button = Button(
+            text="+",
+            size_hint=(0.2, 1),
+            on_press=lambda _instance: self._adjust_turning_point(1),
+        )
+
+        controls.add_widget(self.turning_point_decrement_button)
+        controls.add_widget(self.turning_point_label)
+        controls.add_widget(self.turning_point_increment_button)
+        return controls
+
+    def _build_end_game_controls(self) -> BoxLayout:
+        controls = BoxLayout(
+            orientation="vertical",
+            spacing=8,
+            size_hint=(1, None),
+            height=0,
+            opacity=0,
+        )
         controls.add_widget(
-            Button(
-                text="No Operation",
-                on_press=lambda _instance: self._set_operation(None),
+            Label(
+                text="End Game",
+                font_size="20sp",
+                bold=True,
+                size_hint=(1, None),
+                height=32,
             )
         )
-        for operation in self.OPERATIONS:
-            controls.add_widget(
-                Button(
-                    text=operation,
-                    on_press=lambda _instance, op=operation: self._set_operation(op),
-                )
-            )
+
+        player_controls = BoxLayout(orientation="horizontal", spacing=16)
+        player_controls.add_widget(
+            self._build_secret_op_panel("player_one", "Player 1")
+        )
+        player_controls.add_widget(
+            self._build_secret_op_panel("player_two", "Player 2")
+        )
+        controls.add_widget(player_controls)
         return controls
+
+    def _build_secret_op_panel(self, player: str, title: str) -> BoxLayout:
+        panel = BoxLayout(orientation="vertical", spacing=8)
+        panel.add_widget(
+            Label(text=title, font_size="18sp", size_hint=(1, None), height=28)
+        )
+
+        button_row = BoxLayout(
+            orientation="horizontal",
+            spacing=8,
+            size_hint=(1, None),
+            height=44,
+        )
+        for label, op in self.SECRET_OPS:
+            button = Button(
+                text=label,
+                background_normal="",
+                background_down="",
+                background_color=self.SECRET_OP_BUTTON_COLOR,
+            )
+            button.bind(on_press=partial(self._handle_secret_op_press, player, op))
+            self.secret_op_buttons[(player, op)] = button
+            button_row.add_widget(button)
+
+        status_label = Label(text="Selected: None", size_hint=(1, None), height=24)
+        self.secret_op_status_labels[player] = status_label
+
+        panel.add_widget(button_row)
+        panel.add_widget(status_label)
+        return panel
 
     def _build_persistence_controls(self) -> BoxLayout:
         controls = BoxLayout(orientation="horizontal", spacing=8, size_hint=(1, 0.06))
@@ -120,6 +187,92 @@ class MainGameScreen(BoxLayout):
         controls.add_widget(self.save_button)
         controls.add_widget(self.resume_button)
         return controls
+
+    def _build_end_game_summary(self) -> BoxLayout:
+        summary = BoxLayout(
+            orientation="vertical",
+            spacing=8,
+            size_hint=(1, None),
+            height=0,
+            opacity=0,
+        )
+        summary.add_widget(
+            Label(
+                text="End-Game Summary",
+                font_size="20sp",
+                bold=True,
+                size_hint=(1, None),
+                height=32,
+            )
+        )
+
+        content = BoxLayout(orientation="horizontal", spacing=16)
+        content.add_widget(self._build_summary_player_panel("player_one", "Player One"))
+        content.add_widget(self._build_summary_player_panel("player_two", "Player Two"))
+        summary.add_widget(content)
+        return summary
+
+    def _build_summary_player_panel(self, player: str, title: str) -> Label:
+        label = Label(
+            text=title,
+            halign="left",
+            valign="top",
+        )
+        label.bind(size=lambda instance, value: setattr(instance, "text_size", value))
+        self.summary_player_labels[player] = label
+        return label
+
+    def _format_summary_op_line(
+        self, op: str, value: int, primary_op: str | None
+    ) -> str:
+        marker = f" {self.SUMMARY_PRIMARY_MARKER}" if primary_op == op else ""
+        return f"{self.SECRET_OP_LABELS[op]}: {value} VP{marker}"
+
+    def _format_player_summary(self, player: str, heading: str) -> str:
+        scores = self.game_state._get_player_scores(player)
+        primary_op = scores.secret_op
+        primary_label = (
+            self.SECRET_OP_LABELS[primary_op] if primary_op is not None else "None"
+        )
+
+        tac_line = self._format_summary_op_line(
+            "tac_op", scores.tactical_vp, primary_op
+        )
+        kill_line = self._format_summary_op_line("kill_op", scores.kill_vp, primary_op)
+        crit_line = self._format_summary_op_line(
+            "crit_op", scores.main_mission_vp, primary_op
+        )
+
+        primary_vp = 0
+        if primary_op == "tac_op":
+            primary_vp = scores.tactical_vp
+        elif primary_op == "kill_op":
+            primary_vp = scores.kill_vp
+        elif primary_op == "crit_op":
+            primary_vp = scores.main_mission_vp
+
+        bonus = self.game_state.calculate_bonus_vp(player)
+        tracked_bonus = scores.bonus_vp
+        base_vp_sum = scores.tactical_vp + scores.kill_vp + scores.main_mission_vp
+        formula_total = base_vp_sum + bonus
+        tracked_total = base_vp_sum + tracked_bonus
+
+        return "\n".join(
+            (
+                heading,
+                tac_line,
+                kill_line,
+                crit_line,
+                (
+                    "Primary Op: "
+                    f"{primary_label} ({primary_vp} VP) -> "
+                    "Formula Bonus: "
+                    f"{bonus} (calculate_bonus_vp = ceil({primary_vp}/2))"
+                ),
+                f"Formula Total: {base_vp_sum} + {bonus} = {formula_total}",
+                f"Tracked Total: {base_vp_sum} + {tracked_bonus} = {tracked_total}",
+            )
+        )
 
     def _build_reset_controls(self) -> BoxLayout:
         controls = BoxLayout(orientation="horizontal", spacing=8, size_hint=(1, 0.06))
@@ -237,17 +390,30 @@ class MainGameScreen(BoxLayout):
             self.game_state.decrement_vp(player, category)
         self.refresh_from_state()
 
-    def _set_operation(self, operation: str | None) -> None:
-        self.game_state.select_operation(operation)
-        if operation is None:
-            self.game_state.set_bonus_vp("player_one", 0)
-            self.game_state.set_bonus_vp("player_two", 0)
+    def _adjust_turning_point(self, direction: int) -> None:
+        if self.game_state.end_game:
+            return
+
+        if direction > 0 and self.game_state.turning_point == TURN_MAX:
+            self.game_state.end_game = True
+            self.refresh_from_state()
+            return
+
+        next_turning_point = max(
+            TURN_MIN,
+            min(TURN_MAX, self.game_state.turning_point + direction),
+        )
+        self.game_state.turning_point = next_turning_point
+        self.refresh_from_state()
+
+    def _handle_secret_op_press(self, player: str, op: str, _instance: Button) -> None:
+        self._set_secret_op(player, op)
+
+    def _set_secret_op(self, player: str, op: str) -> None:
+        self.game_state.set_secret_op(player, op)
         self.refresh_from_state()
 
     def _adjust_bonus(self, player: str, direction: int) -> None:
-        if self.game_state.selected_operation is None:
-            return
-
         scores = self.game_state._get_player_scores(player)
         next_points = scores.bonus_vp + direction
         self.game_state.set_bonus_vp(player, next_points)
@@ -294,14 +460,54 @@ class MainGameScreen(BoxLayout):
             self.persistence_status_label.text = f"Resume failed: {exc}"
 
     def refresh_from_state(self) -> None:
-        self.turning_point_label.text = f"Turning Point {self.game_state.turning_point}"
-        selected = self.game_state.selected_operation or "None"
-        self.operation_label.text = f"Operation: {selected}"
+        self.turning_point_label.text = (
+            "End Game"
+            if self.game_state.end_game
+            else f"Turning Point {self.game_state.turning_point}"
+        )
+        self.turning_point_decrement_button.disabled = self.game_state.end_game
+        self.turning_point_increment_button.disabled = self.game_state.end_game
 
-        bonus_enabled = self.game_state.selected_operation is not None
-        for minus_button, plus_button in self.bonus_buttons.values():
-            minus_button.disabled = not bonus_enabled
-            plus_button.disabled = not bonus_enabled
+        self.end_game_controls.height = 120 if self.game_state.end_game else 0
+        self.end_game_controls.opacity = 1 if self.game_state.end_game else 0
+
+        both_revealed = (
+            self.game_state.end_game
+            and self.game_state.player_one.secret_op is not None
+            and self.game_state.player_two.secret_op is not None
+        )
+        self.end_game_summary.height = 200 if both_revealed else 0
+        self.end_game_summary.opacity = 1 if both_revealed else 0
+
+        for button in self.secret_op_buttons.values():
+            button.disabled = not self.game_state.end_game
+
+        for player in ("player_one", "player_two"):
+            selected_op = self.game_state._get_player_scores(player).secret_op
+            selected_label = (
+                self.SECRET_OP_LABELS[selected_op]
+                if selected_op is not None
+                else "None"
+            )
+            self.secret_op_status_labels[player].text = f"Selected: {selected_label}"
+
+            for _label, op in self.SECRET_OPS:
+                self.secret_op_buttons[(player, op)].background_color = (
+                    self.SECRET_OP_SELECTED_COLOR
+                    if selected_op == op
+                    else self.SECRET_OP_BUTTON_COLOR
+                )
+
+        if both_revealed:
+            self.summary_player_labels["player_one"].text = self._format_player_summary(
+                "player_one", "Player One Summary"
+            )
+            self.summary_player_labels["player_two"].text = self._format_player_summary(
+                "player_two", "Player Two Summary"
+            )
+        else:
+            self.summary_player_labels["player_one"].text = ""
+            self.summary_player_labels["player_two"].text = ""
 
         self.reset_confirm_button.disabled = not self.reset_pending
         self.reset_cancel_button.disabled = not self.reset_pending

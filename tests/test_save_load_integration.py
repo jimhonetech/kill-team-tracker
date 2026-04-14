@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 from app.state import GameState, PlayerScores
+from app.state.models import SCHEMA_VERSION
 from app.ui.main_screen import MainGameScreen
 
 
 def test_save_resume_round_trip_restores_state_and_ui() -> None:
     initial = GameState(
-        turning_point=3,
+        turning_point=4,
+        end_game=True,
         player_one=PlayerScores(
             command_points=2,
             tactical_vp=4,
             kill_vp=3,
             main_mission_vp=5,
             bonus_vp=2,
+            secret_op="tac_op",
         ),
         player_two=PlayerScores(
             command_points=1,
@@ -22,8 +25,8 @@ def test_save_resume_round_trip_restores_state_and_ui() -> None:
             kill_vp=6,
             main_mission_vp=4,
             bonus_vp=1,
+            secret_op="kill_op",
         ),
-        selected_operation="Secure Objective",
     )
 
     snapshot = initial.to_dict()
@@ -45,20 +48,22 @@ def test_save_resume_round_trip_restores_state_and_ui() -> None:
     assert screen.persistence_status_label.text == "Game saved"
 
     screen.game_state.turning_point = 1
-    screen.game_state.select_operation(None)
+    screen.game_state.end_game = False
     screen.game_state.decrement_command_points("player_one", amount=2)
     screen.game_state.decrement_vp("player_one", "tactical_vp", amount=4)
     screen.game_state.decrement_vp("player_one", "kill_vp", amount=3)
     screen.game_state.decrement_vp("player_one", "main_mission_vp", amount=5)
     screen.game_state.set_bonus_vp("player_one", 0)
+    screen.game_state.set_secret_op("player_one", "kill_op")
     screen.refresh_from_state()
 
     screen._resume_game()
 
     assert screen.persistence_status_label.text == "Game resumed"
     assert screen.game_state.to_dict() == snapshot
-    assert screen.turning_point_label.text == "Turning Point 3"
-    assert screen.operation_label.text == "Operation: Secure Objective"
+    assert screen.turning_point_label.text == "End Game"
+    assert screen.secret_op_status_labels["player_one"].text == "Selected: Tac Op"
+    assert screen.secret_op_status_labels["player_two"].text == "Selected: Kill Op"
     assert screen.score_value_labels[("player_one", "command_points")].text == "2"
     assert screen.score_value_labels[("player_one", "bonus_vp")].text == "2"
 
@@ -68,7 +73,7 @@ def test_resume_surfaces_deserialization_error_for_invalid_payload() -> None:
         return None
 
     def invalid_resume_handler() -> dict[str, object]:
-        return {"schema_version": 1, "turning_point": 2, "players": []}
+        return {"schema_version": SCHEMA_VERSION, "turning_point": 2, "players": []}
 
     screen = MainGameScreen(
         GameState(),
