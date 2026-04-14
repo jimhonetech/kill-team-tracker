@@ -3,7 +3,7 @@
 import pytest
 
 from app.state import GameState, PlayerScores
-from app.state.models import SCHEMA_VERSION
+from app.state.models import SCHEMA_VERSION, STARTER_KILL_TEAMS
 
 
 def test_game_state_initializes_with_valid_defaults() -> None:
@@ -14,6 +14,50 @@ def test_game_state_initializes_with_valid_defaults() -> None:
     assert state.player_one.command_points == 0
     assert state.player_one.secret_op is None
     assert state.player_two.main_mission_vp == 0
+    assert state.player_one_team is None
+    assert state.player_two_team is None
+
+
+def test_set_team_selection_and_validation_require_both_players() -> None:
+    state = GameState()
+
+    assert state.has_team_selection() is False
+
+    with pytest.raises(
+        ValueError, match="team selection missing for: player_one, player_two"
+    ):
+        state.validate_team_selection()
+
+    assert state.set_team_selection("player_one", "  Kommandos  ") == "Kommandos"
+    assert state.player_one_team == "Kommandos"
+    assert state.has_team_selection() is False
+
+    with pytest.raises(ValueError, match="team selection missing for: player_two"):
+        state.validate_team_selection()
+
+    assert state.set_team_selection("player_two", "Kasrkin") == "Kasrkin"
+    assert state.has_team_selection() is True
+    state.validate_team_selection()
+
+
+def test_set_team_selection_rejects_invalid_inputs() -> None:
+    state = GameState()
+
+    with pytest.raises(ValueError, match="unknown player"):
+        state.set_team_selection("player_three", "Kommandos")
+
+    with pytest.raises(ValueError, match="team name must be a non-empty string"):
+        state.set_team_selection("player_one", "   ")
+
+
+def test_available_kill_teams_returns_static_starter_catalog() -> None:
+    state = GameState()
+
+    teams = state.available_kill_teams()
+    assert teams == STARTER_KILL_TEAMS
+    assert len(teams) >= 40
+    assert "Kommandos" in teams
+    assert "Inquisitorial Agents" in teams
 
 
 def test_game_state_rejects_invalid_turning_point() -> None:
@@ -36,6 +80,8 @@ def test_game_state_serialization_round_trip() -> None:
     original = GameState(
         turning_point=3,
         end_game=True,
+        player_one_team="Kommandos",
+        player_two_team="Kasrkin",
         player_one=PlayerScores(
             command_points=2,
             tactical_vp=4,
@@ -71,6 +117,10 @@ def test_game_state_from_dict_accepts_supported_schema_version() -> None:
             "schema_version": SCHEMA_VERSION,
             "turning_point": 2,
             "end_game": True,
+            "teams": {
+                "player_one": "Kommandos",
+                "player_two": "Kasrkin",
+            },
             "players": {
                 "player_one": {"command_points": 1, "secret_op": "crit_op"},
                 "player_two": {"command_points": 2},
@@ -83,6 +133,35 @@ def test_game_state_from_dict_accepts_supported_schema_version() -> None:
     assert restored.player_one.command_points == 1
     assert restored.player_one.secret_op == "crit_op"
     assert restored.player_two.command_points == 2
+    assert restored.player_one_team == "Kommandos"
+    assert restored.player_two_team == "Kasrkin"
+
+
+def test_game_state_from_dict_rejects_invalid_teams_payload() -> None:
+    with pytest.raises(ValueError, match="teams must be a dictionary"):
+        GameState.from_dict(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "turning_point": 2,
+                "teams": [],
+                "players": {},
+            }
+        )
+
+
+def test_game_state_from_dict_rejects_non_string_team_values() -> None:
+    with pytest.raises(ValueError, match="player_one must be a string or null"):
+        GameState.from_dict(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "turning_point": 2,
+                "teams": {
+                    "player_one": 123,
+                    "player_two": "Kasrkin",
+                },
+                "players": {},
+            }
+        )
 
 
 def test_game_state_from_dict_rejects_missing_schema_version() -> None:

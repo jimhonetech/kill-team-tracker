@@ -19,8 +19,46 @@ Kill Team Tracker is a mobile app for Warhammer 40k Kill Team players to track e
   - Automatically calculate bonus: **+50% of Primary Op score (rounded up)**
 - **Game Management**:
   - Start new game (reset all scores)
-  - Save current game state locally
-  - Resume saved game
+  - Finish a game and optionally keep final scores for future stats/history
+
+## V3 UX Expansion (Planned)
+
+To reduce clutter and improve usability, V3 introduces a guided multi-screen flow.
+
+### Planned Screen Flow
+
+1. **Home Screen**
+- Primary CTA: Start Game
+- Stats button is intentionally deferred to a later milestone
+
+2. **Team Selection Screen**
+- Player 1 selects a Kill Team from a list
+- Player 2 selects a Kill Team from a list
+- Confirm Teams action advances to gameplay
+
+3. **Gameplay Screen (Turning Point 1-4)**
+- Dedicated tracking for each player:
+  - Command Points
+  - Tac Op VP
+  - Kill Op VP
+  - Crit Op VP
+- Turning point controls remain available
+- End Game action available from TP4 with accidental-tap recovery (back path)
+
+4. **End-Game Primary Op Screen**
+- Each player selects revealed Primary Op (Tac Op / Kill Op / Crit Op)
+- Continue action advances to final scoring
+
+5. **Final Score Screen**
+- Display totals including automatic bonus
+- Offer Save Final Scores and Discard Game actions
+- Allow back navigation to correct accidental end-game progression
+
+### Navigation and Safety Requirements
+
+- Users must be able to navigate back between post-start screens before finalizing outcomes.
+- If End Game is triggered accidentally, users can return to gameplay without losing tracked values.
+- Save Final Scores/Discard confirmation should be explicit on the final score screen.
 
 ## Scoring Rules
 
@@ -70,7 +108,14 @@ Maximum possible: 6 + 6 + 6 + 3 = 21 VP (from VP categories alone)
 - As a player, I want the app to automatically calculate my end-game bonus (50% of Primary Op score, rounded up)
 - As a player, I want to see my total score including the end-game bonus
 - As a player, I want to start a new game with zeroed scores
-- As a player, I want to save my game progress and resume later
+- As a player, I want a cleaner multi-screen flow so scoring is less cluttered
+- As a player, I want to select each player's Kill Team before turning point tracking begins
+- As a player, I want to go back if I tap end-game by accident
+- As a player, I want to save final scores into a future stats/history pool or discard them at the final score step
+
+## Deferred Items
+
+- Stats dashboard button and stats screen (deferred from V3 to a later milestone)
 
 ## Technical Requirements
 
