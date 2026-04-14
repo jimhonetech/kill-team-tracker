@@ -98,11 +98,13 @@ def test_end_game_trigger_shows_secret_op_buttons_and_updates_each_player() -> N
     assert screen.end_game_controls.height > 0
     assert screen.secret_op_status_labels["player_one"].text == "Selected: Tac Op"
     assert screen.secret_op_status_labels["player_two"].text == "Selected: Crit Op"
-    assert screen.secret_op_buttons[("player_one", "tac_op")].background_color == list(
-        MainGameScreen.SECRET_OP_SELECTED_COLOR
+    assert (
+        tuple(screen.secret_op_buttons[("player_one", "tac_op")].background_color)
+        == MainGameScreen.SECRET_OP_SELECTED_COLOR
     )
-    assert screen.secret_op_buttons[("player_one", "kill_op")].background_color == list(
-        MainGameScreen.SECRET_OP_BUTTON_COLOR
+    assert (
+        tuple(screen.secret_op_buttons[("player_one", "kill_op")].background_color)
+        == MainGameScreen.SECRET_OP_BUTTON_COLOR
     )
 
 
