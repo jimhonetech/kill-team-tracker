@@ -118,6 +118,7 @@ dmypy.json
 
 # Buildozer
 buildozer/
+.bulldozer/
 
 # Android builds
 *.apk

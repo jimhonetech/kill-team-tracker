@@ -15,13 +15,13 @@ def main() -> None:
 
     from app.state import GameState
     from app.storage.adapter import StorageAdapter
-    from app.ui import MainGameScreen
+    from app.ui import TrackerFlow
 
     storage_adapter = StorageAdapter()
 
     class KillTeamTrackerApp(App):
-        def build(self) -> MainGameScreen:
-            return MainGameScreen(
+        def build(self) -> TrackerFlow:
+            return TrackerFlow(
                 game_state=GameState(),
                 save_handler=storage_adapter.save_handler,
                 resume_handler=storage_adapter.resume_handler,

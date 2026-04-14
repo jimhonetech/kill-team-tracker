@@ -65,7 +65,7 @@ def test_save_resume_round_trip_restores_state_and_ui() -> None:
     assert screen.secret_op_status_labels["player_one"].text == "Selected: Tac Op"
     assert screen.secret_op_status_labels["player_two"].text == "Selected: Kill Op"
     assert screen.score_value_labels[("player_one", "command_points")].text == "2"
-    assert screen.score_value_labels[("player_one", "bonus_vp")].text == "2"
+    assert screen.total_value_labels["player_one"].text == "14"
 
 
 def test_resume_surfaces_deserialization_error_for_invalid_payload() -> None:

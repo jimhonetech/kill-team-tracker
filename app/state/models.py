@@ -15,6 +15,54 @@ VP_MAX = 15
 SCHEMA_VERSION = 2
 VP_CATEGORIES = ("tactical_vp", "kill_vp", "main_mission_vp")
 SECRET_OP_CHOICES = ("tac_op", "kill_op", "crit_op")
+STARTER_KILL_TEAMS = (
+    "Angels of Death",
+    "Battleclade",
+    "Blades of Khaine",
+    "Blooded",
+    "Brood Brothers",
+    "Canoptek Circle",
+    "Celestian Insidiants",
+    "Chaos Cult",
+    "Corsair Voidscarred",
+    "Death Korps",
+    "Deathwatch",
+    "Elucidian Starstriders",
+    "Exaction Squad",
+    "Farstalker Kinband",
+    "Fellgor Ravagers",
+    "Gellerpox Infected",
+    "Goremongers",
+    "Hand of the Archon",
+    "Hearthkyn Salvagers",
+    "Hernkyn Yaegirs",
+    "Hierotek Circle",
+    "Hunter Clade",
+    "Imperial Navy Breachers",
+    "Inquisitorial Agents",
+    "Kasrkin",
+    "Kommandos",
+    "Legionaries",
+    "Mandrakes",
+    "Murderwing",
+    "Nemesis Claw",
+    "Novitiates",
+    "Pathfinders",
+    "Phobos Strike Team",
+    "Plague Marines",
+    "Raveners",
+    "Ratlings",
+    "Sanctifiers",
+    "Scout Squad",
+    "Tempestus Aquilons",
+    "Vespid Stingwings",
+    "Void-Dancer Troupe",
+    "Warpcoven",
+    "Wolf Scouts",
+    "Wrecka Krew",
+    "Wyrmblade",
+    "XV26 Stealth Battlesuits",
+)
 
 
 def _validate_range(name: str, value: int, minimum: int, maximum: int) -> None:
@@ -43,6 +91,18 @@ def _validate_end_game(end_game: bool) -> None:
         raise ValueError("end_game must be a boolean")
 
 
+def _normalize_team_name(team_name: str) -> str:
+    normalized = team_name.strip()
+    if not normalized:
+        raise ValueError("team name must be a non-empty string")
+    return normalized
+
+
+def _validate_team_name(team_name: str | None) -> None:
+    if team_name is not None and not isinstance(team_name, str):
+        raise ValueError("team name must be a string or null")
+
+
 def _coerce_int_field(
     data: dict[str, object], field_name: str, default: int = 0
 ) -> int:
@@ -61,6 +121,17 @@ def _coerce_secret_op_field(data: dict[str, object]) -> str | None:
     if not isinstance(raw_value, str):
         raise ValueError("secret_op must be a string or null")
     return raw_value
+
+
+def _coerce_team_field(data: dict[str, object], field_name: str) -> str | None:
+    raw_value = data.get(field_name)
+    if raw_value is None:
+        return None
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{field_name} must be a string or null")
+
+    normalized = raw_value.strip()
+    return normalized if normalized else None
 
 
 @dataclass(slots=True)
@@ -111,12 +182,16 @@ class GameState:
     turning_point: int = 1
     player_one: PlayerScores = field(default_factory=PlayerScores)
     player_two: PlayerScores = field(default_factory=PlayerScores)
+    player_one_team: str | None = None
+    player_two_team: str | None = None
     selected_operation: str | None = None
     end_game: bool = False
 
     def __post_init__(self) -> None:
         _validate_range("turning_point", self.turning_point, TURN_MIN, TURN_MAX)
         _validate_end_game(self.end_game)
+        _validate_team_name(self.player_one_team)
+        _validate_team_name(self.player_two_team)
 
     def _get_player_scores(self, player: str) -> PlayerScores:
         if player == "player_one":
@@ -174,6 +249,33 @@ class GameState:
 
         self.selected_operation = normalized
         return self.selected_operation
+
+    def set_team_selection(self, player: str, team_name: str) -> str:
+        normalized = _normalize_team_name(team_name)
+        if player == "player_one":
+            self.player_one_team = normalized
+            return self.player_one_team
+        if player == "player_two":
+            self.player_two_team = normalized
+            return self.player_two_team
+        raise ValueError(f"unknown player: {player}")
+
+    def has_team_selection(self) -> bool:
+        return self.player_one_team is not None and self.player_two_team is not None
+
+    def validate_team_selection(self) -> None:
+        missing_players: list[str] = []
+        if self.player_one_team is None:
+            missing_players.append("player_one")
+        if self.player_two_team is None:
+            missing_players.append("player_two")
+
+        if missing_players:
+            joined = ", ".join(missing_players)
+            raise ValueError(f"team selection missing for: {joined}")
+
+    def available_kill_teams(self) -> tuple[str, ...]:
+        return STARTER_KILL_TEAMS
 
     def set_secret_op(self, player: str, op: str) -> str:
         _validate_secret_op(op)
@@ -235,6 +337,8 @@ class GameState:
     def reset_game(self) -> None:
         self.turning_point = TURN_MIN
         self.end_game = False
+        self.player_one_team = None
+        self.player_two_team = None
         self.selected_operation = None
         self.player_one = PlayerScores()
         self.player_two = PlayerScores()
@@ -244,6 +348,10 @@ class GameState:
             "schema_version": SCHEMA_VERSION,
             "turning_point": self.turning_point,
             "end_game": self.end_game,
+            "teams": {
+                "player_one": self.player_one_team,
+                "player_two": self.player_two_team,
+            },
             "selected_operation": self.selected_operation,
             "players": {
                 "player_one": self.player_one.to_dict(),
@@ -280,6 +388,7 @@ class GameState:
         turning_point = int(data["turning_point"])
         end_game_raw = data.get("end_game", False)
         selected_operation_raw = data.get("selected_operation")
+        teams_raw = data.get("teams")
 
         if not isinstance(end_game_raw, bool):
             raise ValueError("end_game must be a boolean")
@@ -290,6 +399,15 @@ class GameState:
             selected_operation = selected_operation_raw.strip() or None
         else:
             raise ValueError("selected_operation must be a string or null")
+
+        if teams_raw is None:
+            player_one_team = None
+            player_two_team = None
+        else:
+            if not isinstance(teams_raw, dict):
+                raise ValueError("teams must be a dictionary")
+            player_one_team = _coerce_team_field(teams_raw, "player_one")
+            player_two_team = _coerce_team_field(teams_raw, "player_two")
 
         players_raw = data["players"]
         if not isinstance(players_raw, dict):
@@ -305,6 +423,8 @@ class GameState:
             turning_point=turning_point,
             player_one=PlayerScores.from_dict(player_one_raw),
             player_two=PlayerScores.from_dict(player_two_raw),
+            player_one_team=player_one_team,
+            player_two_team=player_two_team,
             selected_operation=selected_operation,
             end_game=end_game_raw,
         )

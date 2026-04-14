@@ -3,10 +3,23 @@
 from app.state import GameState, PlayerScores
 from app.state.models import TURN_MAX, TURN_MIN
 from app.ui.main_screen import MainGameScreen
+from app.ui.player_palette import (
+    player_accent,
+    player_button_text,
+    player_surface,
+    player_surface_selected,
+)
+
+
+def _advance_to_turning_point_four(screen: MainGameScreen, state: GameState) -> None:
+    while state.turning_point < TURN_MAX:
+        screen._adjust_turning_point(1)
 
 
 def test_main_screen_renders_scores_from_state() -> None:
     state = GameState(
+        player_one_team="Kommandos",
+        player_two_team="Kasrkin",
         player_one=PlayerScores(
             command_points=2, tactical_vp=3, kill_vp=4, main_mission_vp=5
         ),
@@ -17,10 +30,21 @@ def test_main_screen_renders_scores_from_state() -> None:
 
     screen = MainGameScreen(state)
 
+    assert screen.title_label.text == "Gameplay"
+    assert screen.matchup_label.text == "Kommandos vs Kasrkin"
     assert screen.score_value_labels[("player_one", "command_points")].text == "2"
     assert screen.score_value_labels[("player_one", "tactical_vp")].text == "3"
     assert screen.score_value_labels[("player_two", "kill_vp")].text == "7"
     assert screen.score_value_labels[("player_two", "main_mission_vp")].text == "8"
+
+
+def test_main_screen_layout_is_focused_on_gameplay_controls() -> None:
+    screen = MainGameScreen(GameState())
+
+    assert screen.persistence_controls.parent is None
+    assert screen.reset_controls.parent is None
+    assert screen.end_game_controls.parent is None
+    assert screen.end_game_summary.parent is None
 
 
 def test_main_screen_controls_update_state_and_labels() -> None:
@@ -38,6 +62,35 @@ def test_main_screen_controls_update_state_and_labels() -> None:
     assert screen.score_value_labels[("player_one", "command_points")].text == "1"
     assert screen.score_value_labels[("player_one", "tactical_vp")].text == "1"
     assert screen.score_value_labels[("player_two", "kill_vp")].text == "1"
+
+
+def test_main_screen_uses_shared_player_palette_for_scores_and_selectors() -> None:
+    state = GameState(
+        end_game=True,
+        player_one=PlayerScores(secret_op="tac_op"),
+        player_two=PlayerScores(),
+    )
+    screen = MainGameScreen(state)
+
+    assert tuple(screen.player_title_labels["player_one"].color) == player_accent(
+        "player_one"
+    )
+    assert tuple(
+        screen.score_title_labels[("player_two", "kill_vp")].color
+    ) == player_accent("player_two")
+    assert tuple(screen.total_value_labels["player_one"].color) == player_accent(
+        "player_one"
+    )
+
+    selected_button = screen.secret_op_buttons[("player_one", "tac_op")]
+    unselected_button = screen.secret_op_buttons[("player_one", "kill_op")]
+
+    assert tuple(selected_button.background_color) == player_surface_selected(
+        "player_one"
+    )
+    assert tuple(selected_button.color) == player_button_text(True)
+    assert tuple(unselected_button.background_color) == player_surface("player_one")
+    assert tuple(unselected_button.color) == player_button_text(False)
 
 
 def test_turning_point_controls_update_state_and_respect_bounds() -> None:
@@ -63,13 +116,59 @@ def test_turning_point_controls_update_state_and_respect_bounds() -> None:
     for _ in range(TURN_MIN, TURN_MAX):
         screen._adjust_turning_point(1)
 
+    assert state.turning_point == TURN_MAX
+    assert state.end_game is False
+    assert screen.turning_point_label.text == f"Turning Point {TURN_MAX}"
+    assert screen.turning_point_increment_button.disabled is False
+    assert tuple(screen.turning_point_increment_button.background_color) == (
+        1,
+        0.55,
+        0,
+        1,
+    )
+
+
+def test_tp_plus_button_turns_amber_at_turning_point_four() -> None:
+    state = GameState(turning_point=3)
+    screen = MainGameScreen(state)
+
+    assert tuple(screen.turning_point_increment_button.background_color) == (
+        1,
+        1,
+        1,
+        1,
+    )
+
     screen._adjust_turning_point(1)
 
     assert state.turning_point == TURN_MAX
-    assert state.end_game is True
-    assert screen.turning_point_label.text == "End Game"
-    assert screen.turning_point_decrement_button.disabled is True
-    assert screen.turning_point_increment_button.disabled is True
+    assert tuple(screen.turning_point_increment_button.background_color) == (
+        1,
+        0.55,
+        0,
+        1,
+    )
+
+
+def test_tp_plus_uses_handler_without_locking_gameplay_state() -> None:
+    state = GameState(
+        turning_point=TURN_MAX,
+        player_one_team="Kommandos",
+        player_two_team="Kasrkin",
+    )
+    captured = {"count": 0}
+
+    def end_game_handler() -> None:
+        captured["count"] += 1
+
+    screen = MainGameScreen(state, end_game_handler=end_game_handler)
+
+    screen._adjust_turning_point(1)
+
+    assert captured["count"] == 1
+    assert state.end_game is False
+    assert state.turning_point == TURN_MAX
+    assert screen.matchup_label.text == "Kommandos vs Kasrkin"
 
 
 def test_main_screen_controls_respect_state_bounds() -> None:
@@ -84,108 +183,23 @@ def test_main_screen_controls_respect_state_bounds() -> None:
     assert state.player_one.tactical_vp == 15
 
 
-def test_end_game_trigger_shows_secret_op_buttons_and_updates_each_player() -> None:
+def test_tp_plus_without_handler_keeps_gameplay_state_unchanged() -> None:
     state = GameState(turning_point=TURN_MAX)
     screen = MainGameScreen(state)
 
     screen._adjust_turning_point(1)
-    screen._set_secret_op("player_one", "tac_op")
-    screen._set_secret_op("player_two", "crit_op")
 
-    assert state.end_game is True
-    assert state.player_one.secret_op == "tac_op"
-    assert state.player_two.secret_op == "crit_op"
-    assert screen.end_game_controls.height > 0
-    assert screen.secret_op_status_labels["player_one"].text == "Selected: Tac Op"
-    assert screen.secret_op_status_labels["player_two"].text == "Selected: Crit Op"
-    assert (
-        tuple(screen.secret_op_buttons[("player_one", "tac_op")].background_color)
-        == MainGameScreen.SECRET_OP_SELECTED_COLOR
-    )
-    assert (
-        tuple(screen.secret_op_buttons[("player_one", "kill_op")].background_color)
-        == MainGameScreen.SECRET_OP_BUTTON_COLOR
-    )
-
-
-def test_bonus_vp_controls_remain_usable_in_end_game() -> None:
-    state = GameState(
-        turning_point=TURN_MAX,
-        end_game=True,
-        player_one=PlayerScores(tactical_vp=4, kill_vp=3, main_mission_vp=2),
-        player_two=PlayerScores(tactical_vp=1, kill_vp=1, main_mission_vp=1),
-    )
-    screen = MainGameScreen(state)
-
-    assert screen.total_value_labels["player_one"].text == "9"
-
-    screen._adjust_bonus("player_one", 1)
-    screen._adjust_bonus("player_one", 1)
-
-    assert state.final_scores()["player_one"] == 11
-    assert screen.total_value_labels["player_one"].text == "11"
-
-
-def test_end_game_summary_shows_only_after_both_players_reveal() -> None:
-    state = GameState(turning_point=TURN_MAX, end_game=True)
-    screen = MainGameScreen(state)
-
-    assert screen.end_game_summary.height == 0
-    assert screen.end_game_summary.opacity == 0
-
-    screen._set_secret_op("player_one", "tac_op")
-    assert screen.end_game_summary.height == 0
-    assert screen.end_game_summary.opacity == 0
-
-    screen._set_secret_op("player_two", "kill_op")
-    assert screen.end_game_summary.height > 0
-    assert screen.end_game_summary.opacity == 1
-
-
-def test_end_game_summary_displays_primary_bonus_formula_and_total() -> None:
-    state = GameState(
-        turning_point=TURN_MAX,
-        end_game=True,
-        player_one=PlayerScores(
-            tactical_vp=5, kill_vp=3, main_mission_vp=2, bonus_vp=1
-        ),
-        player_two=PlayerScores(tactical_vp=1, kill_vp=4, main_mission_vp=6),
-    )
-    screen = MainGameScreen(state)
-
-    screen._set_secret_op("player_one", "tac_op")
-    screen._set_secret_op("player_two", "crit_op")
-
-    player_one_summary = screen.summary_player_labels["player_one"].text
-    player_two_summary = screen.summary_player_labels["player_two"].text
-
-    assert "Player One Summary" in player_one_summary
-    assert "Tac Op: 5 VP [PRIMARY]" in player_one_summary
-    assert "Kill Op: 3 VP" in player_one_summary
-    assert "Crit Op: 2 VP" in player_one_summary
-    assert (
-        "Primary Op: Tac Op (5 VP) -> Formula Bonus: 3 "
-        "(calculate_bonus_vp = ceil(5/2))"
-    ) in player_one_summary
-    assert "Formula Total: 10 + 3 = 13" in player_one_summary
-    assert "Tracked Total: 10 + 1 = 11" in player_one_summary
-
-    assert "Player Two Summary" in player_two_summary
-    assert "Tac Op: 1 VP" in player_two_summary
-    assert "Kill Op: 4 VP" in player_two_summary
-    assert "Crit Op: 6 VP [PRIMARY]" in player_two_summary
-    assert (
-        "Primary Op: Crit Op (6 VP) -> Formula Bonus: 3 "
-        "(calculate_bonus_vp = ceil(6/2))"
-    ) in player_two_summary
-    assert "Formula Total: 11 + 3 = 14" in player_two_summary
-    assert "Tracked Total: 11 + 0 = 11" in player_two_summary
+    assert state.turning_point == TURN_MAX
+    assert state.end_game is False
+    assert screen.turning_point_label.text == f"Turning Point {TURN_MAX}"
 
 
 def test_reset_confirm_calls_state_reset_and_updates_screen() -> None:
     state = GameState(
         turning_point=4,
         end_game=True,
+        player_one_team="Kommandos",
+        player_two_team="Kasrkin",
         player_one=PlayerScores(command_points=4, tactical_vp=5, kill_vp=6),
         player_two=PlayerScores(secret_op="kill_op"),
     )
@@ -203,7 +217,13 @@ def test_reset_confirm_calls_state_reset_and_updates_screen() -> None:
     assert state.to_dict() == GameState().to_dict()
     assert screen.score_value_labels[("player_one", "command_points")].text == "0"
     assert screen.turning_point_label.text == "Turning Point 1"
-    assert screen.end_game_controls.height == 0
+    assert tuple(screen.turning_point_increment_button.background_color) == (
+        1,
+        1,
+        1,
+        1,
+    )
+    assert screen.matchup_label.text == "Player One vs Player Two"
 
 
 def test_reset_cancel_path_does_not_mutate_state() -> None:
