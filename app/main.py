@@ -25,6 +25,8 @@ def main() -> None:
                 game_state=GameState(),
                 save_handler=storage_adapter.save_handler,
                 resume_handler=storage_adapter.resume_handler,
+                history_append_handler=storage_adapter.append_history_match,
+                read_stats_summary_handler=storage_adapter.read_stats_summary,
             )
 
     KillTeamTrackerApp().run()

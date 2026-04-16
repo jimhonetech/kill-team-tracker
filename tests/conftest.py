@@ -38,6 +38,12 @@ def _install_kivy_test_doubles() -> None:
             for callback in callbacks:
                 callback(self, *args)
 
+        def setter(self, name: str) -> Any:
+            def _set(_instance: object, value: object) -> None:
+                setattr(self, name, value)
+
+            return _set
+
     class _App:
         def run(self) -> object | None:
             build = getattr(self, "build", None)
@@ -84,6 +90,7 @@ def _install_kivy_test_doubles() -> None:
     button_module = types.ModuleType("kivy.uix.button")
     label_module = types.ModuleType("kivy.uix.label")
     screenmanager_module = types.ModuleType("kivy.uix.screenmanager")
+    scrollview_module = types.ModuleType("kivy.uix.scrollview")
     spinner_module = types.ModuleType("kivy.uix.spinner")
     widget_module = types.ModuleType("kivy.uix.widget")
 
@@ -95,6 +102,7 @@ def _install_kivy_test_doubles() -> None:
     screenmanager_module.NoTransition = _NoTransition
     screenmanager_module.Screen = _Screen
     screenmanager_module.ScreenManager = _ScreenManager
+    scrollview_module.ScrollView = _Widget
     spinner_module.Spinner = _Spinner
     widget_module.Widget = _Widget
 
@@ -106,6 +114,7 @@ def _install_kivy_test_doubles() -> None:
     sys.modules["kivy.uix.button"] = button_module
     sys.modules["kivy.uix.label"] = label_module
     sys.modules["kivy.uix.screenmanager"] = screenmanager_module
+    sys.modules["kivy.uix.scrollview"] = scrollview_module
     sys.modules["kivy.uix.spinner"] = spinner_module
     sys.modules["kivy.uix.widget"] = widget_module
 

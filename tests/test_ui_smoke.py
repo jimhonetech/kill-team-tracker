@@ -34,13 +34,478 @@ def test_main_game_screen_loads_with_default_state() -> None:
     assert screen.total_value_labels["player_two"].text == "0"
 
 
-def test_tracker_flow_defaults_to_home_and_stats_is_deferred() -> None:
+def test_tracker_flow_defaults_to_home_and_stats_navigation_is_enabled() -> None:
     flow = TrackerFlow(GameState())
 
     assert flow.current == "home"
     assert flow.home_screen.start_game_button.text == "Start Game"
-    assert flow.home_screen.stats_button.disabled is True
-    assert "later milestone" in flow.home_screen.stats_note_label.text
+    assert flow.home_screen.stats_button.disabled is False
+
+    flow.home_screen.stats_button.dispatch("on_press")
+
+    assert flow.current == "stats"
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_WIN_RATES
+    assert "stats reader is not configured" in flow.stats_screen.error_label.text
+    flow.stats_screen.back_button.dispatch("on_press")
+    assert flow.current == "home"
+
+
+def test_stats_screen_renders_empty_history_summary() -> None:
+    def read_summary() -> dict[str, object]:
+        return {
+            "total_matches": 0,
+            "draws": 0,
+            "player_slots": {
+                "player_one": {
+                    "wins": 0,
+                    "draws": 0,
+                    "matches": 0,
+                    "win_percentage": 0.0,
+                },
+                "player_two": {
+                    "wins": 0,
+                    "draws": 0,
+                    "matches": 0,
+                    "win_percentage": 0.0,
+                },
+            },
+            "teams": {},
+            "primary_ops": {
+                "player_one": {
+                    "player_entries": 0,
+                    "revealed_primary_ops": 0,
+                    "missing_primary_ops": 0,
+                    "most_successful": {"op": None, "label": None, "tied_ops": []},
+                    "ops": {},
+                },
+                "player_two": {
+                    "player_entries": 0,
+                    "revealed_primary_ops": 0,
+                    "missing_primary_ops": 0,
+                    "most_successful": {"op": None, "label": None, "tied_ops": []},
+                    "ops": {},
+                },
+                "combined": {
+                    "player_entries": 0,
+                    "revealed_primary_ops": 0,
+                    "missing_primary_ops": 0,
+                    "most_successful": {"op": None, "label": None, "tied_ops": []},
+                    "ops": {},
+                },
+            },
+            "op_buckets": {},
+        }
+
+    flow = TrackerFlow(GameState(), read_win_rate_summary_handler=read_summary)
+
+    flow.home_screen.stats_button.dispatch("on_press")
+
+    assert flow.current == "stats"
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_WIN_RATES
+    assert flow.stats_screen.summary_label.text == "Matches: 0   Draws: 0"
+    assert "No match history yet" in flow.stats_screen.empty_history_label.text
+    assert "Player One: 0.00%" in flow.stats_screen.slot_stats_label.text
+    assert "Player Two: 0.00%" in flow.stats_screen.slot_stats_label.text
+    assert "Team Win Rates - Overall" in flow.stats_screen.team_overall_label.text
+    assert (
+        "Team Win Rates - As Player One" in flow.stats_screen.team_player_one_label.text
+    )
+    assert (
+        "Team Win Rates - As Player Two" in flow.stats_screen.team_player_two_label.text
+    )
+    assert "No team data yet" in flow.stats_screen.team_overall_label.text
+    assert "No match history yet" in flow.stats_screen.op_analytics_empty_label.text
+
+
+def test_stats_screen_supports_view_switching_between_win_rates_and_op_analytics() -> (
+    None
+):
+    flow = TrackerFlow(GameState())
+
+    flow.home_screen.stats_button.dispatch("on_press")
+
+    assert flow.current == "stats"
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_WIN_RATES
+
+    flow.stats_screen.op_analytics_button.dispatch("on_press")
+
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_OP_ANALYTICS
+    assert "stats reader is not configured" in flow.stats_screen.error_label.text
+
+    flow.stats_screen.win_rates_button.dispatch("on_press")
+
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_WIN_RATES
+
+
+def test_stats_screen_uses_high_contrast_readability_defaults() -> None:
+    flow = TrackerFlow(GameState())
+    screen = flow.stats_screen
+
+    assert tuple(screen.summary_label.color) == screen._TEXT_PRIMARY
+    assert tuple(screen.error_label.color) == screen._TEXT_ERROR
+    assert tuple(screen.empty_history_label.color) == screen._TEXT_MUTED
+    assert tuple(screen.op_analytics_empty_label.color) == screen._TEXT_MUTED
+    assert tuple(screen.slot_stats_label.color) == screen._TEXT_PRIMARY
+    assert tuple(screen.team_overall_label.color) == screen._TEXT_PRIMARY
+    assert tuple(screen.team_player_one_label.color) == screen._TEXT_PRIMARY
+    assert tuple(screen.team_player_two_label.color) == screen._TEXT_PRIMARY
+    assert (
+        tuple(screen.op_analytics_scope_labels["player_one"].color)
+        == screen._TEXT_PRIMARY
+    )
+    assert (
+        tuple(screen.op_analytics_scope_labels["player_two"].color)
+        == screen._TEXT_PRIMARY
+    )
+    assert (
+        tuple(screen.op_analytics_scope_labels["combined"].color)
+        == screen._TEXT_PRIMARY
+    )
+
+
+def test_stats_screen_renders_slot_and_team_percentages() -> None:
+    def read_summary() -> dict[str, object]:
+        return {
+            "total_matches": 3,
+            "draws": 1,
+            "player_slots": {
+                "player_one": {
+                    "wins": 1,
+                    "draws": 1,
+                    "matches": 3,
+                    "win_percentage": 33.33,
+                },
+                "player_two": {
+                    "wins": 1,
+                    "draws": 1,
+                    "matches": 3,
+                    "win_percentage": 33.33,
+                },
+            },
+            "teams": {
+                "Kommandos": {
+                    "overall": {
+                        "wins": 2,
+                        "draws": 2,
+                        "losses": 0,
+                        "matches": 4,
+                        "win_percentage": 50.0,
+                    },
+                    "player_one": {
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 0,
+                        "matches": 2,
+                        "win_percentage": 50.0,
+                    },
+                    "player_two": {
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 0,
+                        "matches": 2,
+                        "win_percentage": 50.0,
+                    },
+                }
+            },
+            "primary_ops": {
+                "player_one": {
+                    "player_entries": 3,
+                    "revealed_primary_ops": 3,
+                    "missing_primary_ops": 0,
+                    "most_successful": {
+                        "op": "tac_op",
+                        "label": "Tac Op",
+                        "tied_ops": ["tac_op"],
+                    },
+                    "ops": {
+                        "tac_op": {
+                            "label": "Tac Op",
+                            "picks": 2,
+                            "wins": 1,
+                            "draws": 0,
+                            "losses": 1,
+                            "win_percentage": 50.0,
+                            "average_selected_vp": 5.5,
+                            "average_bonus_vp": 2.0,
+                        },
+                        "kill_op": {
+                            "label": "Kill Op",
+                            "picks": 1,
+                            "wins": 0,
+                            "draws": 1,
+                            "losses": 0,
+                            "win_percentage": 0.0,
+                            "average_selected_vp": 2.0,
+                            "average_bonus_vp": 0.0,
+                        },
+                        "crit_op": {
+                            "label": "Crit Op",
+                            "picks": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_percentage": 0.0,
+                            "average_selected_vp": 0.0,
+                            "average_bonus_vp": 0.0,
+                        },
+                    },
+                },
+                "player_two": {
+                    "player_entries": 3,
+                    "revealed_primary_ops": 2,
+                    "missing_primary_ops": 1,
+                    "most_successful": {
+                        "op": "kill_op",
+                        "label": "Kill Op",
+                        "tied_ops": ["kill_op"],
+                    },
+                    "ops": {
+                        "tac_op": {
+                            "label": "Tac Op",
+                            "picks": 1,
+                            "wins": 0,
+                            "draws": 1,
+                            "losses": 0,
+                            "win_percentage": 0.0,
+                            "average_selected_vp": 3.0,
+                            "average_bonus_vp": 0.0,
+                        },
+                        "kill_op": {
+                            "label": "Kill Op",
+                            "picks": 1,
+                            "wins": 1,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_percentage": 100.0,
+                            "average_selected_vp": 6.0,
+                            "average_bonus_vp": 2.0,
+                        },
+                        "crit_op": {
+                            "label": "Crit Op",
+                            "picks": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_percentage": 0.0,
+                            "average_selected_vp": 0.0,
+                            "average_bonus_vp": 0.0,
+                        },
+                    },
+                },
+                "combined": {
+                    "player_entries": 6,
+                    "revealed_primary_ops": 5,
+                    "missing_primary_ops": 1,
+                    "most_successful": {
+                        "op": "tac_op",
+                        "label": "Tac Op",
+                        "tied_ops": ["tac_op", "kill_op"],
+                    },
+                    "ops": {
+                        "tac_op": {
+                            "label": "Tac Op",
+                            "picks": 3,
+                            "wins": 1,
+                            "draws": 1,
+                            "losses": 1,
+                            "win_percentage": 33.33,
+                            "average_selected_vp": 4.67,
+                            "average_bonus_vp": 1.33,
+                        },
+                        "kill_op": {
+                            "label": "Kill Op",
+                            "picks": 2,
+                            "wins": 1,
+                            "draws": 1,
+                            "losses": 0,
+                            "win_percentage": 50.0,
+                            "average_selected_vp": 4.0,
+                            "average_bonus_vp": 1.0,
+                        },
+                        "crit_op": {
+                            "label": "Crit Op",
+                            "picks": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_percentage": 0.0,
+                            "average_selected_vp": 0.0,
+                            "average_bonus_vp": 0.0,
+                        },
+                    },
+                },
+            },
+            "op_buckets": {
+                "tac_op": {
+                    "label": "Tac Op",
+                    "player_one": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 2.67,
+                        "selected_as_primary": 2,
+                        "average_bonus_vp_when_primary": 2.0,
+                    },
+                    "player_two": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 2.0,
+                        "selected_as_primary": 1,
+                        "average_bonus_vp_when_primary": 0.0,
+                    },
+                    "combined": {
+                        "matches": 6,
+                        "wins": 2,
+                        "draws": 2,
+                        "losses": 2,
+                        "win_percentage": 33.33,
+                        "average_vp": 2.34,
+                        "selected_as_primary": 3,
+                        "average_bonus_vp_when_primary": 1.33,
+                    },
+                },
+                "kill_op": {
+                    "label": "Kill Op",
+                    "player_one": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 3.0,
+                        "selected_as_primary": 1,
+                        "average_bonus_vp_when_primary": 1.0,
+                    },
+                    "player_two": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 3.5,
+                        "selected_as_primary": 1,
+                        "average_bonus_vp_when_primary": 2.0,
+                    },
+                    "combined": {
+                        "matches": 6,
+                        "wins": 2,
+                        "draws": 2,
+                        "losses": 2,
+                        "win_percentage": 33.33,
+                        "average_vp": 3.25,
+                        "selected_as_primary": 2,
+                        "average_bonus_vp_when_primary": 1.5,
+                    },
+                },
+                "crit_op": {
+                    "label": "Crit Op",
+                    "player_one": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 1.5,
+                        "selected_as_primary": 0,
+                        "average_bonus_vp_when_primary": 0.0,
+                    },
+                    "player_two": {
+                        "matches": 3,
+                        "wins": 1,
+                        "draws": 1,
+                        "losses": 1,
+                        "win_percentage": 33.33,
+                        "average_vp": 1.0,
+                        "selected_as_primary": 0,
+                        "average_bonus_vp_when_primary": 0.0,
+                    },
+                    "combined": {
+                        "matches": 6,
+                        "wins": 2,
+                        "draws": 2,
+                        "losses": 2,
+                        "win_percentage": 33.33,
+                        "average_vp": 1.25,
+                        "selected_as_primary": 0,
+                        "average_bonus_vp_when_primary": 0.0,
+                    },
+                },
+            },
+        }
+
+    flow = TrackerFlow(GameState(), read_win_rate_summary_handler=read_summary)
+
+    flow.home_screen.stats_button.dispatch("on_press")
+
+    assert flow.current == "stats"
+    assert flow.stats_screen.summary_label.text == "Matches: 3   Draws: 1"
+    assert "Player One: 33.33%" in flow.stats_screen.slot_stats_label.text
+    assert "Player Two: 33.33%" in flow.stats_screen.slot_stats_label.text
+    assert "Kommandos: 50.00%" in flow.stats_screen.team_overall_label.text
+    assert "Team Win Rates - Overall" in flow.stats_screen.team_overall_label.text
+    assert "Kommandos: 50.00%" in flow.stats_screen.team_player_one_label.text
+    assert (
+        "Team Win Rates - As Player One" in flow.stats_screen.team_player_one_label.text
+    )
+    assert "Kommandos: 50.00%" in flow.stats_screen.team_player_two_label.text
+    assert (
+        "Team Win Rates - As Player Two" in flow.stats_screen.team_player_two_label.text
+    )
+
+    flow.stats_screen.op_analytics_button.dispatch("on_press")
+
+    assert flow.stats_screen.stats_views.current == flow.stats_screen.VIEW_OP_ANALYTICS
+    assert (
+        "Most successful Primary Op: Tac Op"
+        in flow.stats_screen.op_analytics_scope_labels["player_one"].text
+    )
+    assert (
+        "Primary Op picks + win rates"
+        not in flow.stats_screen.op_analytics_scope_labels["player_one"].text
+    )
+    assert (
+        "Primary Op pick counts + win rates"
+        in flow.stats_screen.op_analytics_scope_labels["player_one"].text
+    )
+    assert (
+        "Tac Op: 2 picks, 50.00% win"
+        in flow.stats_screen.op_analytics_scope_labels["player_one"].text
+    )
+    assert (
+        "Most successful Primary Op: Kill Op"
+        in flow.stats_screen.op_analytics_scope_labels["player_two"].text
+    )
+    assert (
+        "Most successful Primary Op: Tac Op"
+        in flow.stats_screen.op_analytics_scope_labels["combined"].text
+    )
+    assert (
+        "Supporting Tac Op / Kill Op / Crit Op performance"
+        in flow.stats_screen.op_analytics_scope_labels["combined"].text
+    )
+    assert (
+        "Most successful tie: 2 ops"
+        in flow.stats_screen.op_analytics_scope_labels["combined"].text
+    )
+
+
+def test_stats_screen_surfaces_read_errors() -> None:
+    def failing_summary() -> dict[str, object]:
+        raise ValueError("invalid history file")
+
+    flow = TrackerFlow(GameState(), read_win_rate_summary_handler=failing_summary)
+
+    flow.home_screen.stats_button.dispatch("on_press")
+
+    assert flow.current == "stats"
+    assert flow.stats_screen.summary_label.text == "Stats unavailable"
+    assert "Could not load stats" in flow.stats_screen.error_label.text
+    assert "invalid history file" in flow.stats_screen.error_label.text
 
 
 def test_tracker_flow_start_game_navigates_to_team_selection_entry() -> None:
@@ -305,6 +770,32 @@ def test_final_score_save_button_transitions_to_home() -> None:
     flow.final_score_screen.save_button.dispatch("on_press")
 
     assert flow.current == "home"
+
+
+def test_final_score_save_appends_history_once_per_save_action() -> None:
+    captured: list[dict[str, object]] = []
+
+    def history_append_handler(payload: dict[str, object]) -> None:
+        captured.append(payload)
+
+    flow = TrackerFlow(GameState(), history_append_handler=history_append_handler)
+
+    flow.go_to_team_selection()
+    flow.team_selection_screen._handle_spinner_change("player_one", "Kommandos")
+    flow.team_selection_screen._handle_spinner_change("player_two", "Kasrkin")
+    flow.team_selection_screen.confirm_button.dispatch("on_press")
+
+    _trigger_end_game_via_tp_plus(flow)
+    flow.end_game_screen._set_secret_op("player_one", "tac_op")
+    flow.end_game_screen._set_secret_op("player_two", "kill_op")
+    flow.end_game_screen.continue_button.dispatch("on_press")
+
+    flow.final_score_screen.save_button.dispatch("on_press")
+
+    assert flow.current == "home"
+    assert len(captured) == 1
+    assert captured[0]["turning_point"] == 4
+    assert captured[0]["end_game"] is True
 
 
 def test_e2e_full_game_journey_home_to_final_score() -> None:
