@@ -117,6 +117,41 @@ Maximum possible: 6 + 6 + 6 + 3 = 21 VP (from VP categories alone)
 
 - Stats dashboard button and stats screen (deferred from V3 to a later milestone)
 
+## V4 Stats/History MVP
+
+The next version focuses on turning completed games into a reusable local stats pool.
+
+### Match History Requirements
+
+- When a game is finalized from the Final Score screen and the user chooses Save Final Scores, the app should archive that completed match into local history.
+- The archive must preserve full per-game scoring details so future stats can be computed without data loss.
+- Stored match data should include, at minimum:
+  - Both selected teams
+  - Both players' score buckets: Command Points, Tac Op VP, Kill Op VP, Crit Op VP, Bonus VP
+  - Revealed Primary Op / secret-op selection for each player
+  - Final totals / winner or draw outcome
+  - Enough metadata to support future expansion, such as archive timestamp and schema version
+- Active-game save/resume remains separate from completed-match history.
+
+### Initial Stats Screen MVP
+
+- Enable the Stats entrypoint from Home.
+- Provide an initial win-percentage-focused stats view.
+- Show:
+  - Player 1 win percentage
+  - Player 2 win percentage
+  - Team win percentage overall
+  - Team win percentage when played as Player 1
+  - Team win percentage when played as Player 2
+- Handle empty history clearly.
+
+### Non-Goals For This MVP
+
+- Advanced charts or deep analytics
+- Editing or deleting archived matches
+- Cloud sync or remote storage
+- Additional derived stats such as average VP, primary-op pick rates, or matchup tables
+
 ## Technical Requirements
 
 - Built with Kivy for cross-platform UI
