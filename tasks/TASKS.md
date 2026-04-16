@@ -1204,7 +1204,7 @@ Notes:
 - [x] T-706 UI Agent: Build win-percentage tab from saved match history
 - [x] T-707 QA Agent: Validate stats/history MVP, migration, and win-rate accuracy
 - [x] T-708 Supervisor Agent: Accept or reject V4 stats/history MVP
-- [!] T-709 Packaging Agent: Rebuild and install V4 stats MVP APK
+- [!] T-709 Packaging Agent: Rebuild and install V4 stats MVP APK (Superseded by T-711/T-722)
 - [x] T-710 State Agent: Fix Android save-history crash from eager storage base-dir resolution
 - [x] T-711 Packaging Agent: Rebuild and install APK with Android save-history fix
 
@@ -1223,8 +1223,8 @@ Notes:
 - [x] T-719 Supervisor Agent: Define and assign stats visibility hotfix sequence
 - [x] T-720 UI Agent: Fix stats screen readability/visibility on Android
 - [x] T-721 QA Agent: Validate stats visibility regression fix and run gates
-- [!] T-722 Packaging Agent: Rebuild and install hotfix APK to attached device
-- [!] T-723 Supervisor Agent: Accept or reject stats visibility hotfix delivery
+- [x] T-722 Packaging Agent: Rebuild and install hotfix APK to attached device
+- [x] T-723 Supervisor Agent: Accept or reject stats visibility hotfix delivery
 
 #### T-601
 Task ID: T-601
@@ -2081,7 +2081,7 @@ Notes:
 Task ID: T-709
 Title: Rebuild and install V4 stats MVP APK
 Owner: Packaging Agent
-State: Blocked
+State: Superseded
 Depends on: T-708
 Scope:
 - Build a fresh debug APK containing the V4 stats/history MVP updates.
@@ -2111,6 +2111,7 @@ Notes:
   - `adb -s RZCT203KY2D install -r ./bin/killteamtracker-0.1.0-arm64-v8a-debug.apk` -> `device not found`
 - Supervisor retry also failed with the same ADB `device not found` result.
 - Unblock step: reconnect/authorize phone in ADB, then rerun only the install command.
+- Disposition update: superseded by T-711 (post-crash-fix rebuild/install) and later T-722 hotfix packaging cycle.
 
 #### T-710
 Task ID: T-710
@@ -2575,7 +2576,7 @@ Notes:
 Task ID: T-722
 Title: Rebuild and install hotfix APK to attached device
 Owner: Packaging Agent
-State: Blocked
+State: Done
 Depends on: T-721
 Scope:
 - Build a fresh debug APK including the stats visibility hotfix.
@@ -2611,12 +2612,14 @@ Notes:
   - Reconnect and unlock the phone, accept any USB debugging authorization prompt, and verify `adb devices -l` shows `RZCT203KY2D` in `device` state.
   - If it still does not appear, run `adb kill-server && adb start-server`, replug USB, and confirm the cable/USB mode supports data.
   - Once ADB sees the device, rerun only `adb -s RZCT203KY2D install -r /home/honej/git/kill-team-tracker/bin/killteamtracker-0.1.0-arm64-v8a-debug.apk`.
+- User validation update: user confirmed on-device install path is now working and the stats pages are functioning.
+- Supervisor update: packaging acceptance condition satisfied via successful user on-device verification after reconnect/authorize step.
 
 #### T-723
 Task ID: T-723
 Title: Accept or reject stats visibility hotfix delivery
 Owner: Supervisor Agent
-State: Blocked
+State: Done
 Depends on: T-722
 Scope:
 - Review UI, QA, and packaging evidence for the hotfix sequence.
@@ -2637,6 +2640,8 @@ Notes:
   - T-722 packaging build succeeded, but install is blocked because device `RZCT203KY2D` is not visible to ADB.
 - Supervisor decision: BLOCKED pending device reconnect/authorization and successful `adb install -r` execution.
 - Next action on unblock: rerun only the install command for the built artifact and request user on-device retest of the Stats screen.
+- User retest result: user confirmed "it worked" and stats pages are working on device.
+- Supervisor decision: ACCEPT. Hotfix delivery is complete and merge-ready; UI polish improvements are deferred to a later version per user feedback.
 
 ---
 
